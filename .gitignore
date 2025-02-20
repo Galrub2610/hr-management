@@ -7,10 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node.js
 node_modules
 dist
 dist-ssr
 *.local
+
+# Environment Variables (חשוב למניעת דליפת נתונים רגישים)
+.env
 
 # Editor directories and files
 .vscode/*
@@ -22,4 +26,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Firebase Credentials (מפתח גישה של Firebase)
 firebase-adminsdk.json
