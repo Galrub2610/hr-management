@@ -20,23 +20,28 @@ export const login = async (
       return null;
     }
 
-    // בדיקת Admin דרך Custom Claims
+    // ✅ שליפת ה-IdToken
+    const idToken = await user.getIdToken();
     const idTokenResult = await user.getIdTokenResult();
+
     if (!idTokenResult.claims?.admin) {
       alert("❌ You do not have admin privileges.");
       return null;
     }
 
-    // צור את ה-JWT
+    // ✅ יצירת JWT מאובטח
     const token = await new SignJWT({ email: user.email, role: "admin" })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("1h")
       .sign(SECRET_KEY);
 
     localStorage.setItem("token", token);
+    localStorage.setItem("userEmail", user.email || ""); // ✅ שמירת האימייל לזיהוי בעתיד
+    localStorage.setItem("firebaseToken", idToken); // ✅ שמירת ה-IdToken למקרי שימוש עתידיים
+
     console.log("✅ Login successful, JWT stored.");
 
-    // הפניה למסך הניהול
+    // ✅ הפניה למסך הניהול
     navigate("/companies");
 
     return token;
@@ -47,9 +52,17 @@ export const login = async (
   }
 };
 
-export const logout = (navigate: NavigateFunction) => {
-  signOut(auth);
-  localStorage.removeItem("token");
-  console.log("✅ User logged out");
-  navigate("/login");
+export const logout = async (navigate: NavigateFunction) => {
+  try {
+    await signOut(auth);
+    localStorage.removeItem("token");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("firebaseToken"); // ✅ הסרת ה-IdToken
+
+    console.log("✅ User logged out");
+    navigate("/login");
+  } catch (error: any) {
+    console.error("❌ Logout failed:", error.message);
+    alert("Logout failed: " + error.message);
+  }
 };

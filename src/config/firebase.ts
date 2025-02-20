@@ -1,6 +1,6 @@
 // src/config/firebase.ts
 import { initializeApp } from "firebase/app";
-import { getAuth, RecaptchaVerifier } from "firebase/auth";
+import { getAuth, RecaptchaVerifier } from "firebase/auth"; // ✅ ייבוא מעודכן
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,17 +11,22 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// אתחול Firebase
+// ✅ אתחול Firebase
 export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 
-// אתחול Recaptcha
+// ✅ אתחול Recaptcha עם תמיכה מובנית
 export const initRecaptcha = (containerId: string) => {
   auth.useDeviceLanguage();
-  return new RecaptchaVerifier(containerId, {
-    size: "invisible",
-    callback: (response) => {
-      console.log("✅ Recaptcha verified:", response);
-    }
-  }, auth);
+  try {
+    return new RecaptchaVerifier(auth, containerId, {
+      size: "invisible",
+      callback: (response) => {
+        console.log("✅ Recaptcha verified:", response);
+      },
+    });
+  } catch (error) {
+    console.error("❌ Failed to initialize Recaptcha:", error);
+    return null;
+  }
 };

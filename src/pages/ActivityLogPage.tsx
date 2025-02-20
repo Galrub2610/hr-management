@@ -1,4 +1,3 @@
-// src/pages/ActivityLogPage.tsx
 import { useState, useEffect } from 'react';
 import { getActivityLogs, clearActivityLogs, saveActivityLogs } from '../services/ActivityLogService';
 
@@ -31,32 +30,48 @@ const exportToCSV = (logs: ActivityLog[]) => {
   const link = document.createElement("a");
   link.setAttribute("href", url);
   link.setAttribute("download", "activity_logs.csv");
+  document.body.appendChild(link);
   link.click();
+  document.body.removeChild(link);
 };
 
-// ✅ פונקציה לייבוא CSV
+// ✅ פונקציה לייבוא CSV עם הודעות שגיאה ושמירה על לוגים קודמים
 const importFromCSV = (file: File, setLogs: (logs: ActivityLog[]) => void) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     if (!e.target?.result) return;
-    const text = e.target.result.toString();
-    const rows = text.split("\n").slice(1); // מדלג על הכותרות
-    const importedLogs: ActivityLog[] = rows
-      .filter(row => row.trim() !== "")
-      .map(row => {
-        const [user, action, entity, entityId, timestamp] = row.split(",");
-        return {
-          id: crypto.randomUUID(),
-          user: user.trim(),
-          action: action.trim(),
-          entity: entity.trim(),
-          entityId: entityId.trim(),
-          timestamp: timestamp.trim(),
-        };
-      });
-    saveActivityLogs(importedLogs);
-    setLogs(importedLogs);
-    alert(`✅ Imported ${importedLogs.length} activity logs from CSV.`);
+    
+    try {
+      const text = e.target.result.toString();
+      const rows = text.split("\n").slice(1); // דילוג על כותרות
+      const importedLogs: ActivityLog[] = rows
+        .filter(row => row.trim() !== "" && row.split(",").length === 5) // ✅ סינון שורות לא תקינות
+        .map(row => {
+          const [user, action, entity, entityId, timestamp] = row.split(",");
+          return {
+            id: crypto.randomUUID(),
+            user: user.trim(),
+            action: action.trim(),
+            entity: entity.trim(),
+            entityId: entityId.trim(),
+            timestamp: timestamp.trim(),
+          };
+        });
+
+      if (importedLogs.length === 0) {
+        alert("❌ No valid logs found in the CSV file.");
+        return;
+      }
+
+      const existingLogs = getActivityLogs(); // ✅ שמירה על הלוגים הקיימים
+      const updatedLogs = [...importedLogs, ...existingLogs]; 
+      saveActivityLogs(updatedLogs);
+      setLogs(updatedLogs);
+      alert(`✅ Successfully imported ${importedLogs.length} logs.`);
+    } catch (error) {
+      console.error("❌ CSV Import failed:", error);
+      alert("❌ Failed to import CSV. Please check the file format.");
+    }
   };
   reader.readAsText(file);
 };
