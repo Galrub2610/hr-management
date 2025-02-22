@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { logout } from "../services/authService";
-import { LogOut, User } from "lucide-react"; // ✅ הוספת אייקון נוסף לשם המשתמש
+import { LogOut, User } from "lucide-react"; 
 import { useState, useEffect } from "react";
 
 export function Header() {
@@ -9,7 +9,6 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // ✅ שליפת שם המשתמש (אם יש טוקן)
     const userEmail = localStorage.getItem("userEmail");
     if (userEmail) {
       setUsername(userEmail);
@@ -18,15 +17,18 @@ export function Header() {
   }, []);
 
   const handleLogout = async () => {
-    await logout(navigate); // ✅ מעביר את `navigate` לפונקציה כדי להבטיח ניתוב תקין
+    await logout(navigate);
   };
 
   return (
-    <header className="bg-white shadow p-4 flex justify-between items-center">
-      <h1 className="text-xl font-bold text-gray-700">📊 ניהול כוח אדם</h1>
+    <header className="bg-white shadow-md p-4 flex items-center justify-between">
+      {/* ✅ כותרת ממורכזת */}
+      <h1 className="text-xl font-bold text-gray-700 w-full text-center">
+        📊 ניהול כוח אדם
+      </h1>
 
-      <div className="flex items-center space-x-6">
-        {/* ✅ הצגת שם המשתמש אם קיים, עם אנימציה */}
+      {/* ✅ שם משתמש + כפתור התנתקות */}
+      <div className="flex items-center gap-4 rtl:gap-4">
         {isLoading ? (
           <span className="text-gray-500 animate-pulse">טוען...</span>
         ) : (
@@ -38,7 +40,6 @@ export function Header() {
           )
         )}
 
-        {/* ✅ כפתור התנתקות משופר עם אנימציה */}
         <button 
           onClick={handleLogout} 
           className="bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-red-600 transition active:scale-95"

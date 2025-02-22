@@ -1,61 +1,90 @@
-// src/services/EmployeeService.ts
-import { Employee } from '../models/Employee';
-import { addActivityLog } from './ActivityLogService'; // ✅ חדש
+import { Employee } from "../types/models"; // ✅ שימוש במבנה נתונים תקין
+import { addActivityLog } from "./ActivityLogService"; // ✅ שמירת לוג פעילות
+import { validateEmployee } from "../utils/validation"; // ✅ ולידציה
 
 let employees: Employee[] = [];
 
-// ✅ צור עובד חדש עם רישום לוג
+// ✅ יצירת עובד חדש עם ולידציה ורישום לוג
 export const createEmployee = (employee: Employee): Employee => {
+  // ✅ בדיקת ולידציה
+  const error = validateEmployee(employee);
+  if (error) {
+    console.error("❌ שגיאה באימות הנתונים:", error);
+    throw new Error(error);
+  }
+
+  // ✅ בדיקת קוד עובד ייחודי
+  if (employees.some((emp) => emp.code === employee.code)) {
+    console.error(`❌ קוד העובד ${employee.code} כבר קיים.`);
+    throw new Error("קוד העובד כבר קיים.");
+  }
+
   employee.createdAt = new Date();
   employee.updatedAt = new Date();
   employees.push(employee);
-  console.log("✅ Employee created:", employee);
+  console.log("✅ עובד נוצר בהצלחה:", employee);
 
   // ✅ רישום לוג
-  addActivityLog('Admin', 'Create', 'Employee', employee.code);
+  addActivityLog("Admin", "Create", "Employee", employee.code);
 
   return employee;
 };
 
-// ✅ קרא את כל העובדים עם לוג לבדיקה
+// ✅ שליפת כל העובדים עם לוג לבדיקה
 export const getAllEmployees = (): Employee[] => {
-  console.log("📊 getAllEmployees:", employees);
+  console.log("📊 כל העובדים:", employees);
   return employees;
 };
 
-// ✅ עדכן עובד לפי קוד עם רישום לוג
+// ✅ עדכון עובד עם ולידציה ובדיקות תקינות
 export const updateEmployee = (
-  code: string, 
+  code: string,
   updates: Partial<Employee>
 ): Employee | null => {
-  const employee = employees.find(emp => emp.code === code);
-  if (!employee) {
-    console.warn(`⚠️ Employee with code ${code} not found.`);
+  const index = employees.findIndex((emp) => emp.code === code);
+  if (index === -1) {
+    console.warn(`⚠️ עובד עם הקוד ${code} לא נמצא.`);
     return null;
   }
 
-  Object.assign(employee, updates, { updatedAt: new Date() });
-  console.log("🔄 Employee updated:", employee);
+  // ✅ יצירת אובייקט מעודכן
+  const updatedEmployee: Employee = {
+    ...employees[index],
+    ...updates,
+    updatedAt: new Date(),
+  };
 
-  // ✅ רישום לוג
-  addActivityLog('Admin', 'Update', 'Employee', code);
-
-  return employee;
-};
-
-// ✅ מחק עובד לפי קוד עם רישום לוג
-export const deleteEmployee = (code: string): boolean => {
-  const initialLength = employees.length;
-  employees = employees.filter(emp => emp.code !== code);
-  const deleted = employees.length < initialLength;
-
-  if (deleted) {
-    console.log(`🗑️ Employee with code ${code} deleted.`);
-    // ✅ רישום לוג
-    addActivityLog('Admin', 'Delete', 'Employee', code);
-  } else {
-    console.warn(`⚠️ Employee with code ${code} not found.`);
+  // ✅ ולידציה על הנתונים המעודכנים
+  const error = validateEmployee(updatedEmployee);
+  if (error) {
+    console.error("❌ שגיאה באימות הנתונים:", error);
+    throw new Error(error);
   }
 
-  return deleted;
+  employees[index] = updatedEmployee;
+  console.log("🔄 עובד עודכן בהצלחה:", updatedEmployee);
+
+  // ✅ רישום לוג
+  addActivityLog("Admin", "Update", "Employee", code);
+
+  return updatedEmployee;
+};
+
+// ✅ מחיקת עובד עם לוג לבדיקה
+export const deleteEmployee = (code: string): boolean => {
+  const index = employees.findIndex((emp) => emp.code === code);
+  if (index === -1) {
+    console.warn(`⚠️ עובד עם הקוד ${code} לא נמצא.`);
+    return false;
+  }
+
+  const deletedEmployee = employees[index];
+  employees.splice(index, 1);
+
+  console.log("🗑️ עובד נמחק בהצלחה:", deletedEmployee);
+
+  // ✅ רישום לוג
+  addActivityLog("Admin", "Delete", "Employee", code);
+
+  return true;
 };

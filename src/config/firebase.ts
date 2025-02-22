@@ -1,6 +1,5 @@
-// src/config/firebase.ts
 import { initializeApp } from "firebase/app";
-import { getAuth, RecaptchaVerifier } from "firebase/auth"; // ✅ ייבוא מעודכן
+import { getAuth, setPersistence, browserLocalPersistence, RecaptchaVerifier } from "firebase/auth"; // ✅ עדכון ייבוא
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,6 +14,15 @@ const firebaseConfig = {
 export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 
+// ✅ הגדרת התמדה (שימור חיבור המשתמש) ב-LocalStorage
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("✅ Auth persistence set to LocalStorage.");
+  })
+  .catch((error) => {
+    console.error("❌ Failed to set auth persistence:", error);
+  });
+
 // ✅ אתחול Recaptcha עם תמיכה מובנית
 export const initRecaptcha = (containerId: string) => {
   auth.useDeviceLanguage();
@@ -26,7 +34,7 @@ export const initRecaptcha = (containerId: string) => {
       },
     });
   } catch (error) {
-    console.error("❌ Failed to initialize Recaptcha:", error);
+    console.error("❌ שגיאה באתחול Recaptcha:", error);
     return null;
   }
 };

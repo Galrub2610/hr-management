@@ -1,10 +1,9 @@
-// src/services/authService.ts
 import { auth } from "../config/firebase";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { SignJWT } from "jose";
 import { NavigateFunction } from "react-router-dom";
 
-const SECRET_KEY = new TextEncoder().encode("your_jwt_secret");
+const SECRET_KEY = new TextEncoder().encode(import.meta.env.VITE_JWT_SECRET || "default_secret"); // ✅ שימוש במשתנה סביבה
 
 export const login = async (
   email: string,
@@ -15,8 +14,8 @@ export const login = async (
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    if (!user) {
-      alert("❌ No user found.");
+    if (!user || !user.email) {
+      alert("❌ לא נמצא משתמש עם פרטים אלו.");
       return null;
     }
 
@@ -25,7 +24,7 @@ export const login = async (
     const idTokenResult = await user.getIdTokenResult();
 
     if (!idTokenResult.claims?.admin) {
-      alert("❌ You do not have admin privileges.");
+      alert("❌ אין לך הרשאות מנהל.");
       return null;
     }
 
@@ -36,18 +35,18 @@ export const login = async (
       .sign(SECRET_KEY);
 
     localStorage.setItem("token", token);
-    localStorage.setItem("userEmail", user.email || ""); // ✅ שמירת האימייל לזיהוי בעתיד
-    localStorage.setItem("firebaseToken", idToken); // ✅ שמירת ה-IdToken למקרי שימוש עתידיים
+    localStorage.setItem("userEmail", user.email);
+    localStorage.setItem("firebaseToken", idToken);
 
-    console.log("✅ Login successful, JWT stored.");
+    console.log("✅ התחברות בוצעה בהצלחה, טוקן נשמר.");
 
     // ✅ הפניה למסך הניהול
     navigate("/companies");
 
     return token;
   } catch (error: any) {
-    console.error("❌ Login failed:", error.message);
-    alert("Login failed: " + error.message);
+    console.error("❌ שגיאה בהתחברות:", error.message);
+    alert("❌ שגיאה בהתחברות: " + (error.message || "נסה שוב."));
     return null;
   }
 };
@@ -57,12 +56,17 @@ export const logout = async (navigate: NavigateFunction) => {
     await signOut(auth);
     localStorage.removeItem("token");
     localStorage.removeItem("userEmail");
-    localStorage.removeItem("firebaseToken"); // ✅ הסרת ה-IdToken
+    localStorage.removeItem("firebaseToken");
 
-    console.log("✅ User logged out");
+    console.log("✅ המשתמש התנתק בהצלחה.");
     navigate("/login");
   } catch (error: any) {
-    console.error("❌ Logout failed:", error.message);
-    alert("Logout failed: " + error.message);
+    console.error("❌ שגיאה בהתנתקות:", error.message);
+    alert("❌ שגיאה בהתנתקות: " + (error.message || "נסה שוב."));
   }
+};
+
+// ✅ פונקציה לבדוק אם המשתמש מחובר
+export const isAuthenticated = (): boolean => {
+  return !!localStorage.getItem("token");
 };

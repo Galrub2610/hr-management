@@ -1,91 +1,89 @@
-// src/services/CompanyService.ts
-import { addActivityLog } from './ActivityLogService'; // ✅ חדש
+import { addActivityLog } from "./ActivityLogService"; // ✅ שמירת לוג פעילות
+import { validateCompany } from "../utils/validation"; // ✅ ולידציה
+import { Company } from "../types/models"; // ✅ שימוש במבנה נתונים אחיד
 
-interface Company {
-  code: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// זיכרון מקומי (כאילו זה שרת - ניתן להחליף בהמשך ב-API)
+// זיכרון מקומי (מדמה API - ניתן להחליף בהמשך)
 let companies: Company[] = [
   { code: "01", name: "Alpha Corp", createdAt: new Date(), updatedAt: new Date() },
   { code: "02", name: "Beta Ltd", createdAt: new Date(), updatedAt: new Date() },
 ];
 
-// ✅ קבל את כל החברות
+// ✅ שליפת כל החברות
 export const getAllCompanies = (): Company[] => {
-  console.log("📊 getAllCompanies:", companies);
+  console.log("📊 כל החברות:", companies);
   return companies;
 };
 
-// ✅ צור חברה חדשה עם בדיקת כפילות
+// ✅ יצירת חברה חדשה עם בדיקות
 export const createCompany = (company: Company): void => {
-  if (companies.some(c => c.code === company.code)) {
-    console.error(`❌ Company code ${company.code} already exists.`);
-    throw new Error("Company code already exists.");
+  const error = validateCompany(company);
+  if (error) {
+    console.error("❌ שגיאה באימות הנתונים:", error);
+    throw new Error(error);
+  }
+
+  if (companies.some((c) => c.code === company.code)) {
+    console.error(`❌ קוד החברה ${company.code} כבר קיים.`);
+    throw new Error("קוד החברה כבר קיים.");
   }
 
   company.createdAt = new Date();
   company.updatedAt = new Date();
   companies.push(company);
-  console.log("✅ Company created:", company);
+  console.log("✅ חברה נוצרה בהצלחה:", company);
 
   // ✅ רישום לוג
-  addActivityLog('Admin', 'Create', 'Company', company.code);
+  addActivityLog("Admin", "Create", "Company", company.code);
 };
 
-// ✅ עדכן חברה קיימת עם אפשרות לעדכן קוד חדש
-export const updateCompany = (
-  code: string,
-  updates: Partial<Company>,
-  newCode?: string
-): void => {
-  const index = companies.findIndex(c => c.code === code);
+// ✅ עדכון חברה עם בדיקות לקוד חדש
+export const updateCompany = (code: string, updates: Partial<Company>, newCode?: string): void => {
+  const index = companies.findIndex((c) => c.code === code);
   if (index === -1) {
-    console.error(`❌ Company with code ${code} not found.`);
-    throw new Error("Company not found.");
+    console.error(`❌ חברה עם הקוד ${code} לא נמצאה.`);
+    throw new Error("חברה לא נמצאה.");
   }
 
-  // בדיקה אם הקוד החדש כבר קיים
-  if (newCode && newCode !== code && companies.some(c => c.code === newCode)) {
-    console.error(`❌ Company code ${newCode} already exists.`);
-    throw new Error("Company code already exists.");
+  // ✅ ולידציה על הנתונים המעודכנים
+  const updatedData = { ...companies[index], ...updates, code: newCode ?? companies[index].code };
+  const error = validateCompany(updatedData);
+  if (error) {
+    console.error("❌ שגיאה באימות הנתונים:", error);
+    throw new Error(error);
   }
 
-  const updatedCompany = {
-    ...companies[index],
-    ...updates,
-    code: newCode ?? companies[index].code,
-    updatedAt: new Date(),
-  };
-
-  // אם הקוד משתנה, מחק את החברה הישנה והוסף את החדשה
+  // ✅ אם הקוד משתנה, יש לוודא שאין כפילות
   if (newCode && newCode !== code) {
-    companies = companies.filter(c => c.code !== code);
-    companies.push(updatedCompany);
+    if (companies.some((c) => c.code === newCode)) {
+      console.error(`❌ לא ניתן לעדכן: קוד החברה ${newCode} כבר קיים.`);
+      throw new Error("קוד החברה כבר קיים.");
+    }
+    // מחיקת הרשומה הישנה והוספת החדשה
+    companies = companies.filter((c) => c.code !== code);
+    companies.push(updatedData);
   } else {
-    companies[index] = updatedCompany;
+    companies[index] = updatedData;
   }
 
-  console.log("🔄 Company updated:", updatedCompany);
+  companies[index].updatedAt = new Date();
+  console.log("🔄 חברה עודכנה בהצלחה:", updatedData);
 
   // ✅ רישום לוג
-  addActivityLog('Admin', 'Update', 'Company', code);
+  addActivityLog("Admin", "Update", "Company", code);
 };
 
-// ✅ מחק חברה לפי הקוד עם לוג לבדיקה
+// ✅ מחיקת חברה
 export const deleteCompany = (code: string): void => {
-  const index = companies.findIndex(c => c.code === code);
+  const index = companies.findIndex((c) => c.code === code);
   if (index === -1) {
-    console.error(`❌ Company with code ${code} not found.`);
-    throw new Error("Company not found.");
+    console.error(`❌ חברה עם הקוד ${code} לא נמצאה.`);
+    throw new Error("חברה לא נמצאה.");
   }
 
-  const deleted = companies.splice(index, 1)[0];
-  console.log("🗑️ Company deleted:", deleted);
+  const deleted = companies[index];
+  companies.splice(index, 1);
+  console.log("🗑️ חברה נמחקה:", deleted);
 
   // ✅ רישום לוג
-  addActivityLog('Admin', 'Delete', 'Company', code);
+  addActivityLog("Admin", "Delete", "Company", code);
 };
