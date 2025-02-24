@@ -1,68 +1,778 @@
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
+  /* צבעים ראשיים בהשראת iCount עם תוספת סגול */
+  --primary-color: #0066ff;
+  --primary-hover: #0052cc;
+  --secondary-color: #f5f5f5;
+  --text-color: #333333;
+  --border-color: #e0e0e0;
+  --success-color: #4caf50;
+  --error-color: #f44336;
+  --warning-color: #ff9800;
+  
+  /* גווני סגול */
+  --purple-dark: #2d1f5b;
+  --purple-main: #6c63ff;
+  --purple-light: #f3f0ff;
+  --purple-hover: #8b7fdb;
+  --purple-gradient: linear-gradient(135deg, #6c63ff 0%, #a594ff 50%, #f3f0ff 100%);
+  --purple-glow: 0 0 20px rgba(108, 99, 255, 0.5);
+  --glass-background: rgba(255, 255, 255, 0.8);
+  
+  /* אפקטים */
+  --card-shadow: 0 8px 32px rgba(108, 99, 255, 0.15);
+  --hover-shadow: 0 12px 40px rgba(108, 99, 255, 0.25);
+  --button-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+  --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --inner-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  
+  /* מצב לילה */
+  --dark-background: #1a1a2e;
+  --dark-card: rgba(30, 30, 46, 0.9);
+  --dark-text: #e0e0e0;
+  --dark-border: #2a2a3a;
+  
+  /* טיפוגרפיה */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  line-height: 1.6;
   font-weight: 400;
+  font-size: 16px;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  /* צבעי רקע */
+  color: var(--text-color);
+  background-color: var(--purple-light);
 
+  /* אופטימיזציה */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+/* תמיכה במצב לילה של המערכת */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: var(--dark-text);
+    --glass-background: var(--dark-card);
+    --border-color: var(--dark-border);
+  }
+
+  body {
+    background: linear-gradient(135deg, var(--dark-background) 0%, #2a1f6f 50%, #1a1a2e 100%);
+  }
+
+  .card, .glass {
+    background: var(--dark-card);
+    border-color: var(--dark-border);
+  }
+
+  input, select, textarea {
+    background-color: rgba(30, 30, 46, 0.8);
+    color: var(--dark-text);
+    border-color: var(--dark-border);
+  }
+
+  input:focus, select:focus, textarea:focus {
+    background-color: rgba(40, 40, 56, 0.9);
+  }
+
+  th {
+    background-color: rgba(108, 99, 255, 0.2);
+  }
+
+  tr:hover td {
+    background-color: rgba(108, 99, 255, 0.1);
+  }
 }
-a:hover {
-  color: #535bf2;
+
+/* אנימציות משופרות */
+@keyframes floatingCard {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: var(--card-shadow);
+  }
+  50% {
+    box-shadow: var(--purple-glow), var(--card-shadow);
+  }
+  100% {
+    box-shadow: var(--card-shadow);
+  }
+}
+
+/* שיפורים לכרטיסיות */
+.card {
+  position: relative;
+  isolation: isolate;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--purple-gradient);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: inherit;
+}
+
+.card:hover::after {
+  opacity: 0.05;
+}
+
+/* שיפורים לכפתורים */
+button {
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--purple-main);
+  outline-offset: 2px;
+}
+
+/* שיפורים לטפסים */
+input::placeholder,
+textarea::placeholder {
+  color: rgba(51, 51, 51, 0.5);
+  transition: color 0.3s ease;
+}
+
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: rgba(108, 99, 255, 0.5);
+}
+
+/* שיפורים לטבלאות */
+table {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+tr {
+  transform-origin: center left;
+}
+
+/* אנימציית סיבוב לאייקונים */
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* אפקט גלים בלחיצה */
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.3) 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 1s;
+}
+
+.ripple:active::after {
+  transform: scale(0, 0);
+  opacity: 0.3;
+  transition: 0s;
+}
+
+/* שיפור נגישות */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* תמיכה במסכי רטינה */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .card, .glass {
+    backdrop-filter: blur(12px) saturate(180%);
+  }
+}
+
+/* אופטימיזציה לביצועים */
+* {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* אנימציית רקע */
+@keyframes gradientAnimation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
+  background: var(--purple-gradient);
+  background-size: 200% 200%;
+  animation: gradientAnimation 15s ease infinite;
+  background-attachment: fixed;
+}
+
+/* כותרות */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--purple-dark);
+  font-weight: 600;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  position: relative;
 }
 
 h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+  font-size: 2.5rem;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--purple-dark), var(--purple-main));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: var(--text-shadow);
+  position: relative;
 }
 
+h1::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background: var(--purple-gradient);
+  border-radius: 2px;
+}
+
+/* כפתורים */
 button {
+  background: linear-gradient(135deg, var(--purple-main) 0%, var(--purple-hover) 100%);
+  color: white;
+  border: none;
   border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--button-shadow);
+  position: relative;
+  overflow: hidden;
 }
 
-@media (prefers-color-scheme: light) {
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(255, 255, 255, 0.2), transparent);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--hover-shadow), var(--purple-glow);
+}
+
+button:hover::before {
+  transform: translateY(0);
+}
+
+button:active {
+  transform: translateY(1px);
+  box-shadow: var(--button-shadow);
+}
+
+/* שדות קלט */
+input, select, textarea {
+  border: 2px solid var(--purple-light);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--glass-background);
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: var(--inner-shadow);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--purple-main);
+  box-shadow: var(--purple-glow), var(--inner-shadow);
+  background-color: white;
+  transform: translateY(-1px);
+}
+
+/* טבלאות */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1rem 0;
+  background-color: var(--glass-background);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+th, td {
+  padding: 1rem;
+  text-align: right;
+  border-bottom: 1px solid rgba(108, 99, 255, 0.1);
+  transition: all 0.2s ease;
+}
+
+th {
+  background-color: rgba(108, 99, 255, 0.1);
+  font-weight: 600;
+  color: var(--purple-dark);
+  position: relative;
+}
+
+th::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--purple-gradient);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+th:hover::after {
+  transform: scaleX(1);
+}
+
+tr:hover td {
+  background-color: rgba(108, 99, 255, 0.05);
+  transform: translateX(5px);
+}
+
+/* קונטיינר ראשי */
+#root {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* ניווט */
+nav {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  margin-bottom: 2rem;
+  background: var(--glass-background);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+}
+
+/* קישורים */
+a {
+  color: var(--purple-main);
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+  position: relative;
+}
+
+a:hover {
+  color: var(--purple-hover);
+}
+
+a:hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--purple-gradient);
+  border-radius: 2px;
+}
+
+/* כרטיסיות */
+.card {
+  background: var(--glass-background);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--hover-shadow);
+}
+
+/* הודעות מערכת */
+.toast {
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 0.5rem 0;
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toast.success {
+  background: linear-gradient(135deg, var(--success-color), #45a049);
+  color: white;
+}
+
+.toast.error {
+  background: linear-gradient(135deg, var(--error-color), #d32f2f);
+  color: white;
+}
+
+.toast.warning {
+  background: linear-gradient(135deg, var(--warning-color), #f57c00);
+  color: white;
+}
+
+/* אנימציות */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeInScale 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* אפקט זכוכית משופר */
+.glass {
+  background: var(--glass-background);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
+}
+
+/* תמיכה במובייל ומסכים קטנים */
+@media screen and (max-width: 768px) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    font-size: 14px;
   }
-  a:hover {
-    color: #747bff;
+
+  .page-container {
+    padding: 1rem;
   }
+
+  .card {
+    padding: 1.5rem;
+  }
+
+  .input-group {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .table-container {
+    margin: 0 -1rem;
+    width: calc(100% + 2rem);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  .nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+}
+
+/* אנימציות נוספות */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* קלאסים לאנימציות */
+.slide-in {
+  animation: slideIn 0.5s ease-out;
+}
+
+.scale-in {
+  animation: scaleIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* שיפורים לטפסים במובייל */
+@media (hover: none) {
+  button:hover {
+    transform: none;
+    box-shadow: var(--button-shadow);
+  }
+
+  .card:hover {
+    transform: none;
+    box-shadow: var(--card-shadow);
+  }
+
+  input:focus, select:focus, textarea:focus {
+    transform: none;
+  }
+}
+
+/* תמיכה בכיוון טקסט */
+[dir="rtl"] {
+  .table-container th,
+  .table-container td {
+    text-align: right;
+  }
+
+  .input-group {
+    flex-direction: row-reverse;
+  }
+
+  .nav {
+    flex-direction: row-reverse;
+  }
+}
+
+/* שיפורי ביצועים נוספים */
+@media (prefers-reduced-data: reduce) {
+  * {
+    background-image: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .glass::before {
+    display: none;
+  }
+}
+
+/* תמיכה בהדפסה */
+@media print {
+  body {
+    background: none;
+    color: black;
+  }
+
+  .card, .glass {
+    box-shadow: none;
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+
   button {
-    background-color: #f9f9f9;
+    display: none;
   }
+
+  .table-container {
+    overflow: visible;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+  }
+}
+
+/* שיפורי נגישות נוספים */
+:focus-visible {
+  outline: 3px solid var(--purple-main);
+  outline-offset: 2px;
+}
+
+[role="button"],
+[role="tab"],
+[role="link"] {
+  cursor: pointer;
+}
+
+/* סמן טעינה מותאם */
+.loading {
+  position: relative;
+  color: transparent !important;
+  min-height: 1.6em;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.6em;
+  height: 1.6em;
+  margin: -0.8em;
+  border: 3px solid var(--purple-light);
+  border-top-color: var(--purple-main);
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+}
+
+/* שיפורים לסקרולבר */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(108, 99, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--purple-main);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--purple-hover);
+}
+
+/* אפקטים מתקדמים נוספים */
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+.hover-scale {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* אפקט צל תלת מימדי */
+.shadow-3d {
+  position: relative;
+}
+
+.shadow-3d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(45deg, 
+    rgba(108, 99, 255, 0.2),
+    transparent 40%
+  );
+  z-index: -1;
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
+.shadow-3d:hover::before {
+  opacity: 1;
 }

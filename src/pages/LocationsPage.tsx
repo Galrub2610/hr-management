@@ -20,7 +20,6 @@ const defaultCities = [
 export default function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [cities, setCities] = useState<string[]>(defaultCities);
-  const [form, setForm] = useState({ street: "", city: "" });
   const [newCity, setNewCity] = useState(""); // משתנה לשדה הוספת עיר חדשה
 
   // טעינת כל המקומות מהשרת
@@ -33,11 +32,6 @@ export default function LocationsPage() {
       toast.error("❌ Failed to load locations.");
     }
   }, []);
-
-  // ✅ פונקציה ליצירת קוד ייחודי אוטומטי של 5 ספרות
-  const generateUniqueCode = () => {
-    return Math.floor(10000 + Math.random() * 90000).toString(); // מחזיר מספר בן 5 ספרות
-  };
 
   // ✅ פונקציה להוספת עיר חדשה לרשימה
   const handleAddCity = () => {
@@ -54,137 +48,266 @@ export default function LocationsPage() {
     setNewCity(""); // איפוס השדה
   };
 
-  // ✅ יצירת מקום חדש
-  const handleCreate = () => {
-    if (form.street.trim() === "") {
-      toast.error("❌ רחוב לא יכול להיות ריק.");
-      return;
-    }
-    if (!form.city) {
-      toast.error("❌ אנא בחר עיר.");
-      return;
-    }
-
-    try {
-      const newLocation = createLocation({
-        code: generateUniqueCode(), // קוד ייחודי נוצר אוטומטית
-        street: form.street,
-        city: form.city,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      console.log("✅ Created location:", newLocation);
-      toast.success("✅ מיקום נוסף בהצלחה!");
-      setLocations([...locations, newLocation]); // עדכון הרשימה עם המקום החדש
-      setForm({ street: "", city: "" }); // איפוס הטופס
-    } catch (error) {
-      console.error("❌ Create location failed:", error);
-      toast.error("❌ יצירת מקום נכשלה.");
-    }
-  };
-
   // ✅ מחיקת מקום
   const handleDelete = (code: string) => {
-    if (confirm(`אתה בטוח שברצונך למחוק את המיקום עם קוד ${code}?`)) {
+    if (confirm(`האם אתה בטוח שברצונך למחוק את המיקום עם קוד ${code}?`)) {
       try {
         const success = deleteLocation(code);
         if (success) {
           console.log(`🗑️ Deleted location with code ${code}`);
-          toast.info("✅ מקום נמחק.");
+          toast.info("✅ המיקום נמחק בהצלחה");
           setLocations(locations.filter(loc => loc.code !== code));
         } else {
-          toast.error("❌ מקום לא נמצא.");
+          toast.error("❌ המיקום לא נמצא");
         }
       } catch (error) {
         console.error("❌ Delete location failed:", error);
-        toast.error("❌ מחיקת מקום נכשלה.");
+        toast.error("❌ מחיקת המיקום נכשלה");
       }
     }
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">ניהול מקומות עבודה</h1>
+    <div className="page-container fade-in">
+      <header className="page-header">
+        <h1>ניהול מיקומים</h1>
+        <p className="subtitle">נהל את רשימת המיקומים והערים שלך</p>
+      </header>
 
-      {/* 🟢 טופס הוספת מקום */}
-      <div className="mb-6 bg-white shadow p-4 rounded">
-        <h2 className="text-xl font-bold mb-4">הוסף מיקום חדש</h2>
-        <div className="flex space-x-4 mb-4">
+      <div className="card add-city-card">
+        <h2>הוספת עיר חדשה</h2>
+        <div className="input-group">
           <input
             type="text"
-            placeholder="רחוב"
-            className="border p-2 flex-1"
-            value={form.street}
-            onChange={(e) => setForm({ ...form, street: e.target.value })}
-          />
-          <select
-            className="border p-2 flex-1"
-            value={form.city}
-            onChange={(e) => setForm({ ...form, city: e.target.value })}
-          >
-            <option value="">בחר עיר</option>
-            {cities.map(city => (
-              <option key={city} value={city}>{city}</option>
-            ))}
-          </select>
-        </div>
-        <button
-          className="bg-green-500 text-white px-4 py-2 rounded"
-          onClick={handleCreate}
-        >
-          הוסף מיקום
-        </button>
-      </div>
-
-      {/* 🟢 טופס הוספת עיר חדשה */}
-      <div className="mb-6 bg-white shadow p-4 rounded">
-        <h2 className="text-xl font-bold mb-4">הוסף עיר חדשה</h2>
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="הזן עיר חדשה"
-            className="border p-2 flex-1"
+            placeholder="הזן שם עיר"
             value={newCity}
             onChange={(e) => setNewCity(e.target.value)}
+            className="city-input"
           />
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded"
             onClick={handleAddCity}
+            className="add-button"
           >
             הוסף עיר
           </button>
         </div>
       </div>
 
-      {/* 🟡 טבלת מקומות */}
-      <table className="w-full border-collapse border border-gray-200">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border p-2">קוד</th>
-            <th className="border p-2">רחוב</th>
-            <th className="border p-2">עיר</th>
-            <th className="border p-2">פעולות</th>
-          </tr>
-        </thead>
-        <tbody>
-          {locations.map((loc) => (
-            <tr key={loc.code} className="text-center">
-              <td className="border p-2">{loc.code}</td>
-              <td className="border p-2">{loc.street}</td>
-              <td className="border p-2">{loc.city}</td>
-              <td className="border p-2">
-                <button
-                  className="bg-red-500 text-white px-3 py-1 rounded"
-                  onClick={() => handleDelete(loc.code)}
-                >
-                  מחק
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="card locations-table-card">
+        <div className="table-header">
+          <h2>רשימת מיקומים</h2>
+          <span className="location-count">{locations.length} מיקומים</span>
+        </div>
+        
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>קוד</th>
+                <th>רחוב</th>
+                <th>עיר</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {locations.map((loc) => (
+                <tr key={loc.code} className="location-row">
+                  <td>{loc.code}</td>
+                  <td>{loc.street}</td>
+                  <td>{loc.city}</td>
+                  <td>
+                    <button
+                      onClick={() => handleDelete(loc.code)}
+                      className="delete-button"
+                    >
+                      מחק
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {locations.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="empty-state">
+                    לא נמצאו מיקומים
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <style>{`
+        .page-container {
+          padding: 2rem;
+          max-width: 1200px;
+          margin: 0 auto;
+        }
+
+        .page-header {
+          text-align: center;
+          margin-bottom: 3rem;
+          padding: 2rem;
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 16px;
+          backdrop-filter: blur(10px);
+        }
+
+        .page-header h1 {
+          color: #2d1f5b;
+          margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+          color: #666;
+          margin-top: 0.5rem;
+          font-size: 1.1rem;
+        }
+
+        .card {
+          background: rgba(255, 255, 255, 0.9);
+          border-radius: 16px;
+          padding: 2rem;
+          box-shadow: 0 8px 32px rgba(100, 100, 255, 0.1);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 12px 40px rgba(100, 100, 255, 0.15);
+        }
+
+        .add-city-card {
+          margin-bottom: 2rem;
+        }
+
+        .add-city-card h2 {
+          color: #2d1f5b;
+          margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+        }
+
+        .city-input {
+          flex: 1;
+          border: 2px solid #e0e0ff;
+          transition: all 0.3s ease;
+        }
+
+        .city-input:focus {
+          border-color: #8b7fdb;
+          box-shadow: 0 0 0 3px rgba(139, 127, 219, 0.2);
+        }
+
+        .add-button {
+          background: linear-gradient(135deg, #8b7fdb 0%, #6c63ff 100%);
+          white-space: nowrap;
+          border: none;
+          transition: all 0.3s ease;
+        }
+
+        .add-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+        }
+
+        .locations-table-card {
+          overflow: hidden;
+        }
+
+        .table-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .table-header h2 {
+          color: #2d1f5b;
+          margin: 0;
+        }
+
+        .location-count {
+          background: #f3f0ff;
+          color: #6c63ff;
+          padding: 0.5rem 1rem;
+          border-radius: 20px;
+          font-size: 0.9rem;
+          font-weight: 500;
+        }
+
+        .table-container {
+          overflow-x: auto;
+          border-radius: 12px;
+          border: 1px solid #e0e0ff;
+        }
+
+        table {
+          background: white;
+          width: 100%;
+        }
+
+        th {
+          background: #f3f0ff;
+          color: #2d1f5b;
+          font-weight: 600;
+          padding: 1rem;
+          text-align: right;
+        }
+
+        .location-row {
+          transition: background-color 0.2s ease;
+        }
+
+        .location-row:hover {
+          background-color: #f8f7ff;
+        }
+
+        td {
+          padding: 1rem;
+          border-bottom: 1px solid #e0e0ff;
+        }
+
+        .delete-button {
+          background: #ff4d6d;
+          color: white;
+          padding: 0.5rem 1rem;
+          border-radius: 6px;
+          transition: all 0.3s ease;
+        }
+
+        .delete-button:hover {
+          background: #ff3557;
+          transform: translateY(-2px);
+        }
+
+        .empty-state {
+          text-align: center;
+          color: #666;
+          padding: 3rem !important;
+          background: #f8f7ff;
+        }
+
+        @media (max-width: 768px) {
+          .page-container {
+            padding: 1rem;
+          }
+
+          .input-group {
+            flex-direction: column;
+          }
+
+          .add-button {
+            width: 100%;
+          }
+        }
+      `}</style>
     </div>
   );
 }
