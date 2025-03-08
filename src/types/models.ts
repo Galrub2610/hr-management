@@ -20,7 +20,10 @@ export interface Location {
   
 export interface Employee {
     code: string;      // 3 ספרות
-    name: string;
+    fullName: string;
+    phone?: string;
+    workPermit: boolean;
+    city?: string;
     locationId: string; // מפתח זר למיקום
     companyId?: string; // ✅ מפתח זר לחברה (אופציונלי אם תרצה להציג גישה ישירה)
     createdAt: Date;

@@ -1,16 +1,17 @@
 import React from 'react';
-import { Location } from '../../../types/location.types';
+import { Location, CalculationType } from '../../../types/location.types';
 import styles from './LocationTable.module.css';
 
 interface LocationTableProps {
   locations: Location[];
-  onDelete: (locationId: string) => void;
+  onDelete: (code: string) => void;
+  onEdit: (location: Location) => void;
 }
 
 /**
  * קומפוננטת טבלה להצגת רשימת המיקומים
  */
-const LocationTable: React.FC<LocationTableProps> = ({ locations, onDelete }) => {
+const LocationTable: React.FC<LocationTableProps> = ({ locations, onDelete, onEdit }) => {
   if (!locations || locations.length === 0) {
     return (
       <div className={styles.emptyState}>
@@ -27,22 +28,36 @@ const LocationTable: React.FC<LocationTableProps> = ({ locations, onDelete }) =>
             <th>קוד</th>
             <th>עיר</th>
             <th>רחוב</th>
+            <th>מספר</th>
+            <th>סוג חישוב</th>
+            <th>פרטי חישוב</th>
             <th>פעולות</th>
           </tr>
         </thead>
         <tbody>
           {locations.map((location) => (
-            <tr key={location.id}>
+            <tr key={location.code}>
               <td>{location.code}</td>
               <td>{location.city}</td>
               <td>{location.street}</td>
+              <td>{location.streetNumber}</td>
+              <td>{getCalculationTypeText(location.calculationType)}</td>
+              <td>{getCalculationDetails(location)}</td>
               <td>
-                <button
-                  onClick={() => onDelete(location.id)}
-                  className={styles.deleteButton}
-                >
-                  מחק
-                </button>
+                <div className={styles.actionButtons}>
+                  <button
+                    onClick={() => onEdit(location)}
+                    className={styles.editButton}
+                  >
+                    ערוך
+                  </button>
+                  <button
+                    onClick={() => onDelete(location.code)}
+                    className={styles.deleteButton}
+                  >
+                    מחק
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -53,15 +68,15 @@ const LocationTable: React.FC<LocationTableProps> = ({ locations, onDelete }) =>
 };
 
 /**
- * המרת סוג החישוב לטקסט מתאים בעברית
+ * המרת סוג החישוב לטקסט בעברית
  */
-const getCalculationTypeDisplay = (type: Location['calculationType']): string => {
+const getCalculationTypeText = (type: CalculationType): string => {
   switch (type) {
-    case 'hourly':
+    case CalculationType.HOURLY:
       return 'חישוב שעתי';
-    case 'global':
+    case CalculationType.GLOBAL:
       return 'חישוב גלובלי';
-    case 'dictated':
+    case CalculationType.DICTATED:
       return 'חישוב שעתי מוכתב';
     default:
       return '';
@@ -73,14 +88,14 @@ const getCalculationTypeDisplay = (type: Location['calculationType']): string =>
  */
 const getCalculationDetails = (location: Location): string => {
   switch (location.calculationType) {
-    case 'hourly':
-      return `${location.hourlyRate} ₪ לשעה`;
-    case 'global':
-      return `${location.monthlyPayment} ₪ לחודש`;
-    case 'dictated':
-      return `${location.dictatedHours} שעות`;
+    case CalculationType.HOURLY:
+      return `${(location as any).hourlyRate || 0} ₪ לשעה`;
+    case CalculationType.GLOBAL:
+      return `${(location as any).monthlyPayment || 0} ₪ לחודש`;
+    case CalculationType.DICTATED:
+      return `${(location as any).dictatedHours || 0} שעות`;
     default:
-      return '';
+      return '-';
   }
 };
 

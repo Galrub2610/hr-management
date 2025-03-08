@@ -1,133 +1,347 @@
 import { useState, useEffect } from "react";
-import { getAllLocations, createLocation, deleteLocation } from "../services/LocationService";
 import { toast } from "react-toastify";
+import AddLocationForm from "../components/AddLocationForm/AddLocationForm";
+import { generateUniqueLocationCode, formatCurrency } from "../utils/locationUtils";
+import { getAllLocations, createLocation, deleteLocation, updateLocation } from "../services/LocationService";
+import { getAllCities, City } from '../services/CitiesService';
+import { getAllCompanies } from '../services/CompanyService';
+import { 
+  Location, 
+  CalculationType, 
+  CreateLocationDto, 
+  HourlyLocation, 
+  GlobalLocation, 
+  DictatedLocation,
+  WorkDay
+} from "../types/location.types";
+import styles from './LocationsPage.module.css';
 
-interface Location {
-  code: string; // 5 ספרות - יווצר אוטומטית
-  street: string;
-  city: string;
-  createdAt: Date;
-  updatedAt: Date;
+// פונקציית עזר להמרת ימים לעברית
+const daysMap: { [key: string]: string } = {
+  'SUNDAY': 'ראשון',
+  'MONDAY': 'שני',
+  'TUESDAY': 'שלישי',
+  'WEDNESDAY': 'רביעי',
+  'THURSDAY': 'חמישי',
+  'FRIDAY': 'שישי',
+  'SATURDAY': 'שבת'
+};
+
+interface WorkDayDisplay {
+  dayName: string;
+  hours?: number;
 }
 
-// רשימת ערים ברירת מחדל
-const defaultCities = [
-  "תל אביב", "הרצליה", "רעננה", "כפר סבא", "נתניה", "חדרה", "ראש העין",
-  "שוהם", "קריית אונו", "פתח תקווה", "גני תקווה", "אשדוד", "באר שבע",
-  "רמת השרון", "הוד השרון", "לוד", "רמלה"
-];
+const formatWorkDays = (workDays: WorkDay[] | undefined, calculationType: CalculationType) => {
+  if (!workDays || !Array.isArray(workDays)) return '';
+
+  const isHourly = calculationType === CalculationType.HOURLY;
+
+  return (
+    `<div class="workdays-grid">
+      <div class="workdays-headers ${isHourly ? 'two-columns' : 'one-column'}">
+        <div class="days-header">
+          <span>ימים</span>
+        </div>
+        ${isHourly ? `
+        <div class="hours-header">
+          <span>כמות שעות</span>
+        </div>
+        ` : ''}
+      </div>
+      <div class="workdays-content ${isHourly ? 'two-columns' : 'one-column'}">
+        <div class="days-column">
+          <div class="column-title"></div>
+          ${workDays.map(workDay => 
+            `<div class="day-row">${daysMap[workDay.dayName] || workDay.dayName}</div>`
+          ).join('')}
+        </div>
+        ${isHourly ? `
+        <div class="hours-column">
+          <div class="column-title"></div>
+          ${workDays.map(workDay => 
+            `<div class="hours-row">${workDay.hours || 0}</div>`
+          ).join('')}
+        </div>
+        ` : ''}
+      </div>
+    </div>`
+  );
+};
 
 export default function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([]);
-  const [cities, setCities] = useState<string[]>(defaultCities);
-  const [newCity, setNewCity] = useState(""); // משתנה לשדה הוספת עיר חדשה
+  const [cities, setCities] = useState<City[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
 
-  // טעינת כל המקומות מהשרת
+  // טעינת נתונים התחלתית
   useEffect(() => {
+    loadLocations();
+    loadCities();
+    loadCompanies();
+  }, []);
+
+  // טעינת רשימת המיקומים
+  const loadLocations = async () => {
     try {
-      const locs = getAllLocations();
+      const locs = await getAllLocations();
       setLocations(locs);
     } catch (error) {
       console.error("❌ Failed to load locations:", error);
-      toast.error("❌ Failed to load locations.");
+      toast.error("❌ שגיאה בטעינת המיקומים");
     }
-  }, []);
-
-  // ✅ פונקציה להוספת עיר חדשה לרשימה
-  const handleAddCity = () => {
-    if (newCity.trim() === "") {
-      toast.error("❌ שם העיר לא יכול להיות ריק.");
-      return;
-    }
-    if (cities.includes(newCity)) {
-      toast.error("❌ העיר כבר קיימת ברשימה.");
-      return;
-    }
-    setCities([...cities, newCity]);
-    toast.success(`✅ העיר "${newCity}" נוספה בהצלחה!`);
-    setNewCity(""); // איפוס השדה
   };
 
-  // ✅ מחיקת מקום
-  const handleDelete = (code: string) => {
+  // טעינת רשימת הערים
+  const loadCities = async () => {
+    try {
+      const citiesData = await getAllCities();
+      setCities(citiesData);
+    } catch (error) {
+      console.error('Error loading cities:', error);
+      toast.error("❌ שגיאה בטעינת רשימת הערים");
+    }
+  };
+
+  // טעינת רשימת החברות
+  const loadCompanies = async () => {
+    try {
+      const companiesData = await getAllCompanies();
+      setCompanies(companiesData);
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      toast.error("❌ שגיאה בטעינת רשימת החברות");
+    }
+  };
+
+  const handleEdit = (location: Location) => {
+    setEditingLocation(location);
+    setIsAddFormOpen(true);
+  };
+
+  const handleSubmit = async (formData: any) => {
+    if (editingLocation) {
+      await handleUpdate(formData);
+    } else {
+      await handleAddLocation(formData);
+    }
+  };
+
+  const handleUpdate = async (formData: any) => {
+    if (!editingLocation) return;
+
+    try {
+      const selectedCity = cities.find(c => c.code === formData.cityCode);
+      const selectedCompany = companies.find(c => c.code === formData.managementCompanyCode);
+      
+      if (!selectedCity) {
+        throw new Error("City not found");
+      }
+
+      const workDays = formData.weekDays.map((dayName: string) => ({
+        dayName,
+        hours: formData.calculationType === CalculationType.HOURLY 
+          ? Number(formData.dayHours?.find((dh: { dayId: string; hours: number }) => dh.dayId === dayName)?.hours || 0)
+          : 0
+      }));
+
+      const locationData: CreateLocationDto = {
+        street: formData.street,
+        streetNumber: formData.streetNumber,
+        city: selectedCity.name,
+        cityCode: selectedCity.code,
+        managementCompany: selectedCompany ? {
+          code: selectedCompany.code,
+          name: selectedCompany.name
+        } : undefined,
+        calculationType: formData.calculationType as CalculationType,
+        workDays,
+        hourlyRate: formData.calculationType === CalculationType.HOURLY ? Number(formData.hourlyRate) : undefined,
+        globalAmount: formData.calculationType === CalculationType.GLOBAL ? Number(formData.globalAmount) : undefined
+      };
+
+      await updateLocation(editingLocation.code, locationData);
+      await loadLocations();
+      setEditingLocation(null);
+      setIsAddFormOpen(false);
+      toast.success("✅ המיקום עודכן בהצלחה");
+    } catch (error) {
+      console.error("❌ Failed to update location:", error);
+      toast.error("❌ שגיאה בעדכון המיקום");
+    }
+  };
+
+  const handleAddLocation = async (formData: any) => {
+    try {
+      const selectedCity = cities.find(c => c.code === formData.cityCode);
+      const selectedCompany = companies.find(c => c.code === formData.managementCompanyCode);
+      
+      if (!selectedCity) {
+        throw new Error("City not found");
+      }
+
+      if (!formData.weekDays || !Array.isArray(formData.weekDays) || formData.weekDays.length === 0) {
+        toast.error("❌ יש לבחור לפחות יום אחד");
+        return;
+      }
+
+      const workDays = formData.weekDays.map((dayName: string) => ({
+        dayName,
+        hours: formData.calculationType === CalculationType.HOURLY 
+          ? Number(formData.dayHours?.find((dh: { dayId: string; hours: number }) => dh.dayId === dayName)?.hours || 0)
+          : 0
+      }));
+
+      const locationData: CreateLocationDto = {
+        street: formData.street,
+        streetNumber: formData.streetNumber,
+        city: selectedCity.name,
+        cityCode: selectedCity.code,
+        managementCompany: selectedCompany ? {
+          code: selectedCompany.code,
+          name: selectedCompany.name
+        } : undefined,
+        calculationType: formData.calculationType as CalculationType,
+        workDays,
+        hourlyRate: formData.calculationType === CalculationType.HOURLY ? Number(formData.hourlyRate) : undefined,
+        globalAmount: formData.calculationType === CalculationType.GLOBAL ? Number(formData.globalAmount) : undefined
+      };
+
+      await createLocation(locationData);
+      await loadLocations();
+      setIsAddFormOpen(false);
+      toast.success("✅ המיקום נוסף בהצלחה");
+    } catch (error) {
+      console.error("❌ Failed to add location:", error);
+      toast.error("❌ שגיאה בהוספת המיקום");
+    }
+  };
+
+  const handleDelete = async (code: string) => {
     if (confirm(`האם אתה בטוח שברצונך למחוק את המיקום עם קוד ${code}?`)) {
       try {
-        const success = deleteLocation(code);
+        const success = await deleteLocation(code);
         if (success) {
-          console.log(`🗑️ Deleted location with code ${code}`);
-          toast.info("✅ המיקום נמחק בהצלחה");
-          setLocations(locations.filter(loc => loc.code !== code));
+          await loadLocations();
+          toast.success("✅ המיקום נמחק בהצלחה");
         } else {
           toast.error("❌ המיקום לא נמצא");
         }
       } catch (error) {
-        console.error("❌ Delete location failed:", error);
-        toast.error("❌ מחיקת המיקום נכשלה");
+        console.error("❌ Failed to delete location:", error);
+        toast.error("❌ שגיאה במחיקת המיקום");
       }
     }
   };
 
+  const getCityFullName = (cityCode: string) => {
+    const city = cities.find(c => c.code === cityCode);
+    return city ? `${city.code} - ${city.name}` : cityCode;
+  };
+
   return (
-    <div className="page-container fade-in">
-      <header className="page-header">
-        <h1>ניהול מיקומים</h1>
-        <p className="subtitle">נהל את רשימת המיקומים והערים שלך</p>
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h1>
+          ניהול מיקומים
+        </h1>
+        <button onClick={() => setIsAddFormOpen(true)} className={styles.addButton}>
+          הוסף מיקום חדש
+        </button>
       </header>
 
-      <div className="card add-city-card">
-        <h2>הוספת עיר חדשה</h2>
-        <div className="input-group">
-          <input
-            type="text"
-            placeholder="הזן שם עיר"
-            value={newCity}
-            onChange={(e) => setNewCity(e.target.value)}
-            className="city-input"
-          />
-          <button
-            onClick={handleAddCity}
-            className="add-button"
-          >
-            הוסף עיר
-          </button>
+      <div className={styles.tableContainer}>
+        <div className={styles.tableTitle}>
+          <h2>טבלת מיקומים (locationsDataTable)</h2>
         </div>
-      </div>
-
-      <div className="card locations-table-card">
-        <div className="table-header">
-          <h2>רשימת מיקומים</h2>
-          <span className="location-count">{locations.length} מיקומים</span>
-        </div>
-        
-        <div className="table-container">
-          <table>
+        <div className={styles.tableWrapper}>
+          <table className={styles.dataTable} data-variable-name="locationsDataTable">
             <thead>
               <tr>
-                <th>קוד</th>
-                <th>רחוב</th>
-                <th>עיר</th>
+                <th>קוד מיקום (locationCode)</th>
+                <th>רחוב (locationStreet)</th>
+                <th>מספר רחוב (streetNumber)</th>
+                <th>עיר (cityName)</th>
+                <th>ימי עבודה (workDays)</th>
+                <th>סוג חישוב (calculationType)</th>
+                <th>פרטי חישוב (paymentDetails)</th>
+                <th>חברת ניהול (managementCompany)</th>
                 <th>פעולות</th>
               </tr>
             </thead>
             <tbody>
               {locations.map((loc) => (
-                <tr key={loc.code} className="location-row">
+                <tr key={loc.code}>
                   <td>{loc.code}</td>
                   <td>{loc.street}</td>
-                  <td>{loc.city}</td>
+                  <td>{loc.streetNumber}</td>
+                  <td>{getCityFullName(loc.cityCode)}</td>
+                  <td dir="rtl" className={styles.workdaysCell}>
+                    {loc.workDays.map(day => daysMap[day.dayName]).join(', ')}
+                  </td>
                   <td>
-                    <button
-                      onClick={() => handleDelete(loc.code)}
-                      className="delete-button"
-                    >
-                      מחק
-                    </button>
+                    {loc.calculationType === CalculationType.HOURLY ? 'חישוב שעתי' :
+                     loc.calculationType === CalculationType.GLOBAL ? 'חישוב גלובלי' : 'חישוב מוכתב'}
+                  </td>
+                  <td className={styles.calculationDetailsCell}>
+                    {loc.calculationType === CalculationType.HOURLY ? (
+                      <div className={styles.calculationDetails}>
+                        <div className={styles.detailsGrid}>
+                          <div className={styles.detailsColumn}>
+                            <div className={styles.columnHeader}>יום (dayNameColumn)</div>
+                            {loc.workDays.map(day => (
+                              <div key={day.dayName} className={styles.detailRow}>
+                                {daysMap[day.dayName]}
+                              </div>
+                            ))}
+                          </div>
+                          <div className={styles.detailsColumn}>
+                            <div className={styles.columnHeader}>שעות (dayHoursColumn)</div>
+                            {loc.workDays.map(day => (
+                              <div key={day.dayName} className={styles.detailRow}>
+                                {day.hours}
+                              </div>
+                            ))}
+                          </div>
+                          <div className={styles.detailsColumn}>
+                            <div className={styles.columnHeader}>תעריף לשעה (hourlyRateInput)</div>
+                            <div className={styles.detailRow}>
+                              {formatCurrency(loc.hourlyRate || 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : loc.calculationType === CalculationType.GLOBAL ? (
+                      <div className={styles.calculationDetails}>
+                        <div className={styles.detailsGrid}>
+                          <div className={styles.detailsColumn}>
+                            <div className={styles.columnHeader}>סכום גלובלי (globalAmountInput)</div>
+                            <div className={styles.detailRow}>
+                              {formatCurrency(loc.globalAmount || 0)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                  </td>
+                  <td>{loc.managementCompany ? `${loc.managementCompany.name} (${loc.managementCompany.code})` : '-'}</td>
+                  <td>
+                    <div className={styles.actionsGroup}>
+                      <button onClick={() => handleEdit(loc)} className={styles.editButton}>
+                        ערוך
+                      </button>
+                      <button onClick={() => handleDelete(loc.code)} className={styles.deleteButton}>
+                        מחק
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {locations.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="empty-state">
+                  <td colSpan={8} className={styles.emptyState}>
                     לא נמצאו מיקומים
                   </td>
                 </tr>
@@ -137,177 +351,23 @@ export default function LocationsPage() {
         </div>
       </div>
 
-      <style>{`
-        .page-container {
-          padding: 2rem;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .page-header {
-          text-align: center;
-          margin-bottom: 3rem;
-          padding: 2rem;
-          background: rgba(255, 255, 255, 0.7);
-          border-radius: 16px;
-          backdrop-filter: blur(10px);
-        }
-
-        .page-header h1 {
-          color: #2d1f5b;
-          margin-bottom: 0.5rem;
-        }
-
-        .subtitle {
-          color: #666;
-          margin-top: 0.5rem;
-          font-size: 1.1rem;
-        }
-
-        .card {
-          background: rgba(255, 255, 255, 0.9);
-          border-radius: 16px;
-          padding: 2rem;
-          box-shadow: 0 8px 32px rgba(100, 100, 255, 0.1);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 12px 40px rgba(100, 100, 255, 0.15);
-        }
-
-        .add-city-card {
-          margin-bottom: 2rem;
-        }
-
-        .add-city-card h2 {
-          color: #2d1f5b;
-          margin-bottom: 1.5rem;
-        }
-
-        .input-group {
-          display: flex;
-          gap: 1rem;
-          align-items: center;
-        }
-
-        .city-input {
-          flex: 1;
-          border: 2px solid #e0e0ff;
-          transition: all 0.3s ease;
-        }
-
-        .city-input:focus {
-          border-color: #8b7fdb;
-          box-shadow: 0 0 0 3px rgba(139, 127, 219, 0.2);
-        }
-
-        .add-button {
-          background: linear-gradient(135deg, #8b7fdb 0%, #6c63ff 100%);
-          white-space: nowrap;
-          border: none;
-          transition: all 0.3s ease;
-        }
-
-        .add-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
-        }
-
-        .locations-table-card {
-          overflow: hidden;
-        }
-
-        .table-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-        }
-
-        .table-header h2 {
-          color: #2d1f5b;
-          margin: 0;
-        }
-
-        .location-count {
-          background: #f3f0ff;
-          color: #6c63ff;
-          padding: 0.5rem 1rem;
-          border-radius: 20px;
-          font-size: 0.9rem;
-          font-weight: 500;
-        }
-
-        .table-container {
-          overflow-x: auto;
-          border-radius: 12px;
-          border: 1px solid #e0e0ff;
-        }
-
-        table {
-          background: white;
-          width: 100%;
-        }
-
-        th {
-          background: #f3f0ff;
-          color: #2d1f5b;
-          font-weight: 600;
-          padding: 1rem;
-          text-align: right;
-        }
-
-        .location-row {
-          transition: background-color 0.2s ease;
-        }
-
-        .location-row:hover {
-          background-color: #f8f7ff;
-        }
-
-        td {
-          padding: 1rem;
-          border-bottom: 1px solid #e0e0ff;
-        }
-
-        .delete-button {
-          background: #ff4d6d;
-          color: white;
-          padding: 0.5rem 1rem;
-          border-radius: 6px;
-          transition: all 0.3s ease;
-        }
-
-        .delete-button:hover {
-          background: #ff3557;
-          transform: translateY(-2px);
-        }
-
-        .empty-state {
-          text-align: center;
-          color: #666;
-          padding: 3rem !important;
-          background: #f8f7ff;
-        }
-
-        @media (max-width: 768px) {
-          .page-container {
-            padding: 1rem;
-          }
-
-          .input-group {
-            flex-direction: column;
-          }
-
-          .add-button {
-            width: 100%;
-          }
-        }
-      `}</style>
+      {isAddFormOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <AddLocationForm
+              isOpen={isAddFormOpen}
+              cities={cities}
+              companies={companies}
+              onSubmit={handleSubmit}
+              onClose={() => {
+                setIsAddFormOpen(false);
+                setEditingLocation(null);
+              }}
+              initialData={editingLocation}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

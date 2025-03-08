@@ -1,0 +1,440 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* צבעים מדויקים מ-iCount */
+    --background: #ffffff;
+    --background-secondary: #f8f9fa;
+    --primary: #0077cc;
+    --primary-hover: #0066b3;
+    --secondary: #f0f2f5;
+    --secondary-hover: #e4e6e9;
+    --text-primary: #1a1a1a;
+    --text-secondary: #666666;
+    --border-color: #e5e7eb;
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+
+    /* עיגול פינות */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 1rem;
+    --radius-full: 9999px;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+ 
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+ 
+    --secondary-foreground: 222.2 47.4% 11.2%;
+ 
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+ 
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+ 
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+ 
+    --radius: 0.5rem;
+
+    --header-bg: #1a237e;
+    --header-text: #ffffff;
+
+    --primary-color: #0066ff;
+    --primary-hover: #0052cc;
+    --secondary-color: #f5f5f5;
+    --text-color: #333333;
+    --success-color: #4caf50;
+    --error-color: #f44336;
+    --warning-color: #ff9800;
+  }
+
+  html {
+    direction: rtl;
+  }
+
+  body {
+    background-color: var(--background-secondary);
+    color: var(--text-primary);
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    direction: rtl;
+    margin: 0;
+  }
+
+  h1 {
+    @apply text-4xl font-bold text-[#1a1a1a] leading-tight;
+  }
+
+  h2 {
+    @apply text-3xl font-bold text-[#1a1a1a] leading-tight;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold text-[#1a1a1a] leading-tight;
+  }
+
+  * {
+    border-color: var(--border-color);
+  }
+
+  /* הגדרות עדכון הגדרות טפסים */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"] {
+    @apply w-full;
+    border: 2px solid #e5e7eb !important;
+    border-radius: 6px !important;
+    padding: 0.75rem !important;
+    transition: all 0.2s !important;
+  }
+
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  input[type="email"]:focus,
+  input[type="tel"]:focus {
+    border-color: #4a90e2 !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2) !important;
+  }
+
+  /* עדכון הגדרות כפתורים */
+  button.submitButton {
+    background-color: #34c759 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s !important;
+  }
+
+  button.submitButton:hover {
+    background-color: #2fb350 !important;
+  }
+
+  button.cancelButton {
+    background-color: #ff3b30 !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s !important;
+  }
+
+  button.cancelButton:hover {
+    background-color: #e6352b !important;
+  }
+
+  /* עדכון הגדרות תוויות */
+  label {
+    display: block !important;
+    margin-bottom: 0.5rem !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+  }
+
+  /* הגדרות בסיסיות */
+  html {
+    direction: rtl;
+  }
+
+  body {
+    background-color: var(--background-secondary);
+    color: var(--text-primary);
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    direction: rtl;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* כפתורים */
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)];
+  }
+
+  .btn-secondary {
+    @apply bg-[var(--secondary)] text-[var(--text-primary)] hover:bg-[var(--secondary-hover)];
+  }
+
+  /* כרטיסים */
+  .card {
+    @apply bg-white rounded-2xl p-6 shadow-sm;
+    border: 1px solid var(--border-color);
+  }
+
+  /* שדות טופס */
+  .form-input {
+    @apply w-full rounded-xl p-3;
+    border: 1px solid var(--border-color);
+  }
+
+  .form-input:focus {
+    @apply ring-2 ring-[var(--primary)];
+    border-color: var(--primary);
+  }
+
+  .form-label {
+    @apply block text-base font-medium mb-2;
+    color: var(--text-secondary);
+  }
+
+  .form-error {
+    @apply mt-2 text-sm;
+    color: var(--error);
+  }
+
+  /* תפריט */
+  .menu-item {
+    @apply flex items-center gap-3 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200;
+    color: var(--text-secondary);
+  }
+
+  .menu-item:hover {
+    background-color: var(--secondary);
+    color: var(--primary);
+  }
+
+  .menu-item.active {
+    background-color: var(--secondary);
+    color: var(--primary);
+  }
+
+  .menu-item-icon {
+    @apply w-5 h-5;
+  }
+
+  .menu-item-text {
+    @apply text-base font-medium;
+  }
+
+  /* טבלאות */
+  .table-container {
+    @apply overflow-hidden rounded-2xl shadow-sm bg-white;
+    border: 1px solid var(--border-color);
+  }
+
+  /* הודעות טוסט */
+  .toast {
+    @apply rounded-xl shadow-lg p-4 mb-4;
+  }
+
+  .toast-success {
+    @apply bg-[#10b981] text-white;
+  }
+
+  .toast-error {
+    @apply bg-[#ef4444] text-white;
+  }
+
+  .toast-info {
+    @apply bg-[#0077cc] text-white;
+  }
+
+  .toast-warning {
+    @apply bg-[#f59e0b] text-white;
+  }
+
+  /* תפריט צדדי */
+  .sidebar {
+    @apply fixed top-0 right-0 h-full w-64 bg-white shadow-lg z-50;
+    @apply transform transition-transform duration-300 ease-in-out;
+    border-right: 1px solid #e5e7eb;
+  }
+
+  .sidebar-header {
+    @apply flex items-center justify-between p-6 border-b border-[#e5e7eb];
+  }
+
+  .sidebar-header h2 {
+    @apply text-xl font-bold text-gray-900;
+  }
+
+  .sidebar-content {
+    @apply p-4 h-[calc(100vh-5rem)] overflow-y-auto;
+  }
+
+  .sidebar-nav {
+    @apply space-y-2;
+  }
+
+  /* כפתור סגירת תפריט */
+  .sidebar-close {
+    @apply p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors duration-200;
+  }
+
+  /* אנימציות */
+  .transform {
+    transform: translateX(0);
+  }
+
+  .translate-x-full {
+    transform: translateX(100%);
+  }
+
+  .translate-x-0 {
+    transform: translateX(0);
+  }
+
+  /* אנימציות */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .fade-enter {
+    opacity: 0;
+  }
+
+  .fade-enter-active {
+    opacity: 1;
+    transition: opacity 200ms ease-in;
+  }
+
+  .fade-exit {
+    opacity: 1;
+  }
+
+  .fade-exit-active {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+  }
+
+  .header {
+    @apply bg-[#1a237e] text-white py-4;
+  }
+
+  .header-button {
+    @apply px-6 py-2 rounded-full text-sm font-medium transition-all duration-200;
+  }
+
+  .header-button-primary {
+    @apply bg-white text-[#1a237e] hover:bg-opacity-90;
+  }
+
+  .header-button-secondary {
+    @apply text-white hover:bg-white hover:bg-opacity-10;
+  }
+
+  .menu-section {
+    width: 100%;
+  }
+
+  .submenu {
+    padding-right: 1rem;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-right: 2px solid rgba(0, 0, 0, 0.1);
+    margin: 0.5rem 0;
+  }
+
+  .submenu-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: #4a5568;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+  }
+
+  .submenu-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #2d3748;
+  }
+
+  .submenu-item.active {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #2d3748;
+    font-weight: 600;
+  }
+}
+
+/* אנימציות */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 200ms ease-in;
+}
+
+@layer utilities {
+  .rtl {
+    direction: rtl;
+  }
+
+  .ltr {
+    direction: ltr;
+  }
+}
+
+*[data-variable-name]::after,
+*[data-variable-name]::before,
+.variable-name::after,
+.variable-name::before,
+th::after,
+th::before,
+td::after,
+td::before {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+[data-variable-name] {
+  position: static !important;
+} 

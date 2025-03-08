@@ -39,4 +39,38 @@ export const generateLocationId = (existingIds: string[]): string => {
   } while (existingIds.includes(newId));  // וידוא שהמזהה לא קיים כבר
 
   return newId;
+};
+
+/**
+ * יצירת קוד ייחודי למיקום - 5 ספרות
+ * @param existingCodes מערך של קודים קיימים שצריך להימנע מהם
+ * @returns קוד ייחודי חדש
+ */
+export const generateUniqueLocationCode = (existingCodes: string[]): string => {
+  const min = 10000; // המספר הקטן ביותר בן 5 ספרות
+  const max = 99999; // המספר הגדול ביותר בן 5 ספרות
+  
+  let newCode: string;
+  
+  do {
+    // יצירת מספר רנדומלי בין 10000 ל-99999
+    const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+    newCode = randomNum.toString();
+  } while (existingCodes.includes(newCode));
+  
+  return newCode;
+};
+
+/**
+ * פונקציה עזר להמרת מספר לפורמט מטבע
+ * @param amount הסכום להמרה
+ * @returns מחרוזת מפורמטת של הסכום
+ */
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('he-IL', {
+    style: 'currency',
+    currency: 'ILS',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 }; 

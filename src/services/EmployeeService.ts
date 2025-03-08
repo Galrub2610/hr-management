@@ -2,89 +2,81 @@ import { Employee } from "../types/models"; // ✅ שימוש במבנה נתו�
 import { addActivityLog } from "./ActivityLogService"; // ✅ שמירת לוג פעילות
 import { validateEmployee } from "../utils/validation"; // ✅ ולידציה
 
+export interface CreateEmployeeDto {
+  fullName: string;
+  phone?: string;
+  workPermit: boolean;
+  city?: string;
+}
+
 let employees: Employee[] = [];
 
-// ✅ יצירת עובד חדש עם ולידציה ורישום לוג
-export const createEmployee = (employee: Employee): Employee => {
-  // ✅ בדיקת ולידציה
-  const error = validateEmployee(employee);
-  if (error) {
-    console.error("❌ שגיאה באימות הנתונים:", error);
-    throw new Error(error);
-  }
-
-  // ✅ בדיקת קוד עובד ייחודי
-  if (employees.some((emp) => emp.code === employee.code)) {
-    console.error(`❌ קוד העובד ${employee.code} כבר קיים.`);
-    throw new Error("קוד העובד כבר קיים.");
-  }
-
-  employee.createdAt = new Date();
-  employee.updatedAt = new Date();
-  employees.push(employee);
-  console.log("✅ עובד נוצר בהצלחה:", employee);
-
-  // ✅ רישום לוג
-  addActivityLog("Admin", "Create", "Employee", employee.code);
-
-  return employee;
+// ✅ פונקציה ליצירת קוד עובד ייחודי בן 4 ספרות
+const generateUniqueEmployeeCode = (): string => {
+  let code: string;
+  do {
+    code = Math.floor(1000 + Math.random() * 9000).toString();
+  } while (employees.some(emp => emp.code === code));
+  return code;
 };
 
-// ✅ שליפת כל העובדים עם לוג לבדיקה
+// ✅ קבלת כל העובדים
 export const getAllEmployees = (): Employee[] => {
-  console.log("📊 כל העובדים:", employees);
   return employees;
 };
 
-// ✅ עדכון עובד עם ולידציה ובדיקות תקינות
-export const updateEmployee = (
-  code: string,
-  updates: Partial<Employee>
-): Employee | null => {
-  const index = employees.findIndex((emp) => emp.code === code);
-  if (index === -1) {
-    console.warn(`⚠️ עובד עם הקוד ${code} לא נמצא.`);
-    return null;
+// ✅ יצירת עובד חדש
+export const createEmployee = (employeeData: CreateEmployeeDto): Employee => {
+  // ולידציה לשדה חובה
+  if (!employeeData.fullName || employeeData.fullName.trim() === "") {
+    throw new Error("שם העובד הוא שדה חובה");
   }
 
-  // ✅ יצירת אובייקט מעודכן
+  // ולידציה למספר טלפון (אם הוזן)
+  if (employeeData.phone && !/^\d+$/.test(employeeData.phone)) {
+    throw new Error("מספר טלפון חייב להכיל ספרות בלבד");
+  }
+
+  const newEmployee: Employee = {
+    code: generateUniqueEmployeeCode(),
+    fullName: employeeData.fullName.trim(),
+    phone: employeeData.phone,
+    workPermit: employeeData.workPermit,
+    city: employeeData.city?.trim(),
+    locationId: "temp", // ערך זמני - נעדכן בהמשך כשנחבר למיקומים
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  employees.push(newEmployee);
+  console.log("עובד חדש נוסף:", newEmployee);
+  
+  addActivityLog("default-user", "Create", "Employee", newEmployee.code);
+  return newEmployee;
+};
+
+// ✅ מחיקת עובד
+export const deleteEmployee = (code: string): boolean => {
+  const index = employees.findIndex(emp => emp.code === code);
+  if (index === -1) return false;
+  
+  employees.splice(index, 1);
+  return true;
+};
+
+// ✅ עדכון עובד
+export const updateEmployee = (code: string, employeeData: CreateEmployeeDto): Employee | null => {
+  const index = employees.findIndex(emp => emp.code === code);
+  if (index === -1) return null;
+
   const updatedEmployee: Employee = {
     ...employees[index],
-    ...updates,
-    updatedAt: new Date(),
+    ...employeeData,
+    updatedAt: new Date()
   };
 
-  // ✅ ולידציה על הנתונים המעודכנים
-  const error = validateEmployee(updatedEmployee);
-  if (error) {
-    console.error("❌ שגיאה באימות הנתונים:", error);
-    throw new Error(error);
-  }
-
   employees[index] = updatedEmployee;
-  console.log("🔄 עובד עודכן בהצלחה:", updatedEmployee);
-
-  // ✅ רישום לוג
-  addActivityLog("Admin", "Update", "Employee", code);
-
   return updatedEmployee;
 };
 
-// ✅ מחיקת עובד עם לוג לבדיקה
-export const deleteEmployee = (code: string): boolean => {
-  const index = employees.findIndex((emp) => emp.code === code);
-  if (index === -1) {
-    console.warn(`⚠️ עובד עם הקוד ${code} לא נמצא.`);
-    return false;
-  }
-
-  const deletedEmployee = employees[index];
-  employees.splice(index, 1);
-
-  console.log("🗑️ עובד נמחק בהצלחה:", deletedEmployee);
-
-  // ✅ רישום לוג
-  addActivityLog("Admin", "Delete", "Employee", code);
-
-  return true;
-};
+// כאן יבואו הפונקציות החדשות

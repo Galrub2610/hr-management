@@ -1,51 +1,128 @@
 // src/pages/DashboardPage.tsx
-import { useState, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import { Header } from "../components/Header";
-import { StatCard } from "../components/StatCard";
-import { Users, Building, MapPin, DollarSign } from "lucide-react";
-import { getAllCompanies } from "../services/CompanyService";
-import { getAllEmployees } from "../services/EmployeeService";
-import { getAllLocations } from "../services/LocationService";
+import React, { useState, useEffect } from 'react';
+import { getAllLocations } from '../services/LocationService';
+import { Location, CalculationType } from '../types/location.types';
+import { formatCurrency } from '../utils/locationUtils';
+import styles from './DashboardPage.module.css';
+
+// פונקציית עזר להמרת ימים לעברית
+const daysMap: { [key: string]: string } = {
+  'SUNDAY': 'ראשון',
+  'MONDAY': 'שני',
+  'TUESDAY': 'שלישי',
+  'WEDNESDAY': 'רביעי',
+  'THURSDAY': 'חמישי',
+  'FRIDAY': 'שישי',
+  'SATURDAY': 'שבת'
+};
 
 export default function DashboardPage() {
-  const [companyCount, setCompanyCount] = useState(0);
-  const [employeeCount, setEmployeeCount] = useState(0);
-  const [locationCount, setLocationCount] = useState(0);
-  const [totalLocationPrice, setTotalLocationPrice] = useState(0);
+  const [locations, setLocations] = useState<Location[]>([]);
 
   useEffect(() => {
-    try {
-      const companies = getAllCompanies();
-      const employees = getAllEmployees();
-      const locations = getAllLocations();
-
-      setCompanyCount(companies.length);
-      setEmployeeCount(employees.length);
-      setLocationCount(locations.length);
-      setTotalLocationPrice(
-        locations.reduce((sum, loc) => sum + (loc.price || 0), 0)
-      );
-    } catch (error) {
-      console.error("❌ Error loading dashboard data:", error);
-    }
+    loadLocations();
   }, []);
 
+  const loadLocations = async () => {
+    try {
+      const data = await getAllLocations();
+      setLocations(data);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+    }
+  };
+
+  // חישוב הסכום לגבייה
+  const calculateAmount = (location: Location): number => {
+    if (location.calculationType === CalculationType.HOURLY) {
+      const totalHours = location.workDays.reduce((sum, day) => sum + (day.hours || 0), 0);
+      return totalHours * (location as any).hourlyRate;
+    } else if (location.calculationType === CalculationType.GLOBAL) {
+      return (location as any).globalAmount;
+    }
+    return 0;
+  };
+
+  // פונקציה להצגת פרטי התשלום
+  const renderPaymentDetails = (location: Location) => {
+    if (location.calculationType === CalculationType.HOURLY) {
+      return (
+        <div>
+          <div>תעריף לשעה: {formatCurrency((location as any).hourlyRate)}</div>
+          {location.workDays.map(day => (
+            <div key={day.dayName}>
+              {daysMap[day.dayName]}: {day.hours} שעות
+            </div>
+          ))}
+        </div>
+      );
+    } else if (location.calculationType === CalculationType.GLOBAL) {
+      return <div>סכום גלובלי: {formatCurrency((location as any).globalAmount)}</div>;
+    }
+    return null;
+  };
+
   return (
-    <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header />
-        <main className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Companies" value={companyCount} icon={Building} />
-          <StatCard title="Locations" value={locationCount} icon={MapPin} />
-          <StatCard title="Employees" value={employeeCount} icon={Users} />
-          <StatCard
-            title="Total Locations Price"
-            value={`$${totalLocationPrice.toFixed(2)}`}
-            icon={DollarSign}
-          />
-        </main>
+    <div className={styles.container}>
+      <div className={styles.titleWrapper}>
+        <h1 className={styles.mainTitle}>
+          דוח ניהול חברת אורלנדו אחזקות וניהול מבנים א.ג בע״מ
+        </h1>
+      </div>
+
+      <div className={styles.tableContainer}>
+        <h2 className={styles.tableTitle}>
+          ניהול ההכנסות וההוצאות של החברה (companyFinanceTable)
+        </h2>
+        
+        <div className={styles.tableWrapper}>
+          <table className={styles.dataTable}>
+            <thead>
+              <tr>
+                <th colSpan={5} className={styles.sectionHeader}>
+                  הכנסות (incomeSection)
+                </th>
+              </tr>
+              <tr>
+                <th>חברות ניהול (managementCompany)</th>
+                <th>כתובת (locationAddress)</th>
+                <th>ימי עבודה (workDays)</th>
+                <th>פרטי תשלום (paymentDetails)</th>
+                <th>סכום לגבייה (collectionAmount)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {locations.map((location) => (
+                <tr key={location.code}>
+                  <td>
+                    {location.managementCompany 
+                      ? `${location.managementCompany.name} (${location.managementCompany.code})`
+                      : '-'}
+                  </td>
+                  <td>
+                    {`${location.street}, ${location.streetNumber}, ${location.city}`}
+                  </td>
+                  <td>
+                    {location.workDays.map(day => daysMap[day.dayName]).join(', ')}
+                  </td>
+                  <td>
+                    {renderPaymentDetails(location)}
+                  </td>
+                  <td>
+                    {formatCurrency(calculateAmount(location))}
+                  </td>
+                </tr>
+              ))}
+              {locations.length === 0 && (
+                <tr>
+                  <td colSpan={5} className={styles.emptyState}>
+                    לא נמצאו נתונים
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

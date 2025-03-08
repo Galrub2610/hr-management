@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Location, CreateLocationDto, CalculationType } from '../../types/location.types';
+import React, { useState, useEffect, ReactElement } from 'react';
+import { Location, CreateLocationDto, CalculationType, HourlyLocation, GlobalLocation, DictatedLocation } from '../../types/location.types';
 import { showSuccessToast, showErrorToast } from '../../utils/toast';
 import { systemMessages } from '../../utils/toast';
 import styles from './LocationManagement.module.css';
 import LocationForm from './LocationForm/LocationForm';
-import { getAllLocations, createLocation, deleteLocation } from '../../services/LocationService';
+import { getAllLocations, createLocation, deleteLocation, updateLocation } from '../../services/LocationService';
 
 /**
  * קומפוננטה ראשית לניהול מיקומים
@@ -13,6 +13,7 @@ import { getAllLocations, createLocation, deleteLocation } from '../../services/
 const LocationManagement: React.FC = () => {
   const [locations, setLocations] = useState<Location[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [cities] = useState<string[]>([
     'תל אביב',
     'הרצליה',
@@ -52,7 +53,6 @@ const LocationManagement: React.FC = () => {
   const handleCreateLocation = (locationData: CreateLocationDto) => {
     try {
       const savedLocation = createLocation(locationData);
-      console.log("נוצר מיקום חדש:", savedLocation);
       setLocations(prevLocations => [...prevLocations, savedLocation]);
       setIsFormOpen(false);
       showSuccessToast(systemMessages.success.created);
@@ -62,7 +62,36 @@ const LocationManagement: React.FC = () => {
       } else {
         showErrorToast(systemMessages.error.general);
       }
-      console.error('Error creating location:', error);
+    }
+  };
+
+  const handleEditLocation = (location: Location) => {
+    setEditingLocation(location);
+    setIsFormOpen(true);
+  };
+
+  const handleUpdateLocation = (locationData: CreateLocationDto) => {
+    if (!editingLocation) return;
+
+    try {
+      const updatedLocation = updateLocation(editingLocation.code, locationData);
+      if (updatedLocation) {
+        setLocations(prevLocations =>
+          prevLocations.map(loc =>
+            loc.code === editingLocation.code ? updatedLocation : loc
+          )
+        );
+        setIsFormOpen(false);
+        setEditingLocation(null);
+        showSuccessToast(systemMessages.success.updated);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        showErrorToast(error.message);
+      } else {
+        showErrorToast(systemMessages.error.general);
+      }
+      console.error('Error updating location:', error);
     }
   };
 
@@ -107,6 +136,66 @@ const LocationManagement: React.FC = () => {
     }
   };
 
+  /**
+   * המרת רשימת ימים למחרוזת מפורמטת
+   */
+  const formatWorkDays = (workDays: string[]): string => {
+    if (!workDays || workDays.length === 0) return 'לא נבחרו ימים';
+    return workDays.join(', ');
+  };
+
+  /**
+   * הצגת פרטי החישוב בהתאם לסוג המיקום
+   */
+  const renderCalculationDetails = (location: Location): ReactElement => {
+    switch (location.calculationType) {
+      case CalculationType.HOURLY:
+        const hourlyLoc = location as HourlyLocation;
+        return (
+          <>
+            <td>{formatWorkDays(hourlyLoc.workDays)}</td>
+            <td>{hourlyLoc.hourlyRate} ₪</td>
+            <td>{Object.values(hourlyLoc.workHours).join(', ')} שעות</td>
+            <td>-</td>
+          </>
+        );
+      case CalculationType.GLOBAL:
+        const globalLoc = location as GlobalLocation;
+        return (
+          <>
+            <td>{formatWorkDays(globalLoc.workDays)}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>{globalLoc.monthlyPayment} ₪</td>
+          </>
+        );
+      case CalculationType.DICTATED:
+        const dictatedLoc = location as DictatedLocation;
+        return (
+          <>
+            <td>-</td>
+            <td>-</td>
+            <td>{dictatedLoc.dictatedHours} שעות</td>
+            <td>-</td>
+          </>
+        );
+      default:
+        return (
+          <>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+          </>
+        );
+    }
+  };
+
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    setEditingLocation(null);
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -119,7 +208,6 @@ const LocationManagement: React.FC = () => {
         </button>
       </header>
 
-      {/* טבלת מיקומים */}
       <div className={styles.tableContainer}>
         <table className={styles.table}>
           <thead>
@@ -129,7 +217,12 @@ const LocationManagement: React.FC = () => {
               <th>רחוב</th>
               <th>מספר</th>
               <th>סוג חישוב</th>
+              <th>ימי עבודה</th>
+              <th>תעריף שעתי</th>
+              <th>שעות עבודה</th>
+              <th>תשלום חודשי</th>
               <th>תאריך יצירה</th>
+              <th>תאריך עדכון</th>
               <th>פעולות</th>
             </tr>
           </thead>
@@ -141,20 +234,30 @@ const LocationManagement: React.FC = () => {
                 <td>{location.street}</td>
                 <td>{location.streetNumber}</td>
                 <td>{getCalculationTypeText(location.calculationType)}</td>
+                {renderCalculationDetails(location)}
                 <td>{new Date(location.createdAt).toLocaleDateString('he-IL')}</td>
+                <td>{new Date(location.updatedAt).toLocaleDateString('he-IL')}</td>
                 <td>
-                  <button
-                    className={styles.deleteButton}
-                    onClick={() => handleDeleteLocation(location.code)}
-                  >
-                    מחק
-                  </button>
+                  <div className={styles.actionButtons}>
+                    <button
+                      className={styles.editButton}
+                      onClick={() => handleEditLocation(location)}
+                    >
+                      ערוך
+                    </button>
+                    <button
+                      className={styles.deleteButton}
+                      onClick={() => handleDeleteLocation(location.code)}
+                    >
+                      מחק
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
             {locations.length === 0 && (
               <tr>
-                <td colSpan={7} className={styles.emptyState}>
+                <td colSpan={12} className={styles.emptyState}>
                   {systemMessages.info.noData}
                 </td>
               </tr>
@@ -163,12 +266,12 @@ const LocationManagement: React.FC = () => {
         </table>
       </div>
 
-      {/* טופס יצירת מיקום חדש */}
       {isFormOpen && (
         <LocationForm
           cities={cities}
-          onSubmit={handleCreateLocation}
-          onCancel={() => setIsFormOpen(false)}
+          onSubmit={editingLocation ? handleUpdateLocation : handleCreateLocation}
+          onCancel={handleFormClose}
+          initialData={editingLocation}
         />
       )}
     </div>

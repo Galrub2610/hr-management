@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence, RecaptchaVerifier } from "firebase/auth"; // ✅ עדכון ייבוא
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,6 +14,7 @@ const firebaseConfig = {
 // ✅ אתחול Firebase
 export const firebaseApp = initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
+export const db = getFirestore(firebaseApp);
 
 // ✅ הגדרת התמדה (שימור חיבור המשתמש) ב-LocalStorage
 setPersistence(auth, browserLocalPersistence)

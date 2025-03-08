@@ -7,20 +7,19 @@ import {
   deleteCompany,
 } from "../services/CompanyService";
 import { toast } from "react-toastify";
+import styles from './CompanyPage.module.css';
 
 interface Company {
   code: string;
   name: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export default function CompanyPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [form, setForm] = useState({ code: "", name: "" });
-  const [searchTerm, setSearchTerm] = useState(""); // 🔍 חיפוש
-  const [sortField, setSortField] = useState<keyof Company | null>(null);
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: "" });
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
 
   useEffect(() => {
     refreshCompanies();
@@ -33,175 +32,187 @@ export default function CompanyPage() {
       setCompanies([...data]);
     } catch (error) {
       console.error("❌ Failed to fetch companies:", error);
-      toast.error("❌ Failed to load companies.");
+      toast.error("שגיאה בטעינת החברות");
     }
   };
 
-  const validateForm = () => {
-    if (!/^\d{2}$/.test(form.code)) {
-      toast.error("❌ Company code must be exactly 2 digits.");
-      return false;
+  const generateUniqueCompanyCode = (): string => {
+    const existingCodes = companies.map(c => parseInt(c.code));
+    let newCode = 10; // Starting from 10 to ensure 2 digits
+    
+    while (existingCodes.includes(newCode) && newCode < 100) {
+      newCode++;
     }
-    if (form.name.trim() === "") {
-      toast.error("❌ Company name cannot be empty.");
-      return false;
+    
+    if (newCode >= 100) {
+      throw new Error("לא ניתן ליצור קוד חברה חדש - כל הקודים תפוסים");
     }
-    return true;
+    
+    return newCode.toString();
   };
 
   const handleCreate = () => {
-    if (!validateForm()) return;
+    if (!formData.name.trim()) {
+      toast.error("נא להזין שם חברה");
+      return;
+    }
+
     try {
+      const newCompanyCode = generateUniqueCompanyCode();
       createCompany({
-        code: form.code,
-        name: form.name,
+        code: newCompanyCode,
+        name: formData.name,
         createdAt: new Date(),
-        updatedAt: new Date(),
       });
-      toast.success("✅ Company created successfully!");
+      toast.success("החברה נוספה בהצלחה!");
       refreshCompanies();
-      setForm({ code: "", name: "" });
+      handleFormClose();
     } catch (error) {
       console.error("❌ Create company failed:", error);
-      toast.error("❌ Failed to create company.");
+      toast.error("שגיאה ביצירת החברה");
     }
   };
 
-  const handleUpdate = (code: string) => {
-    const current = companies.find((c) => c.code === code);
-    if (!current) {
-      toast.error("❌ Company not found.");
-      return;
-    }
-
-    const newCode = prompt("Enter new company code (2 digits):", current.code)?.trim();
-    const newName = prompt("Enter new company name:", current.name)?.trim();
-
-    if (newCode && !/^\d{2}$/.test(newCode)) {
-      toast.error("❌ Company code must be exactly 2 digits.");
-      return;
-    }
+  const handleUpdate = (company: Company) => {
+    const newName = prompt("הכנס שם חברה חדש:", company.name)?.trim();
 
     if (newName) {
       try {
-        updateCompany(code, { name: newName }, newCode || code);
-        toast.success("✅ Company updated successfully!");
+        updateCompany(company.code, { name: newName });
+        toast.success("החברה עודכנה בהצלחה!");
         refreshCompanies();
       } catch (error) {
         console.error("❌ Update company failed:", error);
-        toast.error("❌ Failed to update company.");
+        toast.error("שגיאה בעדכון החברה");
       }
     }
   };
 
   const handleDelete = (code: string) => {
-    if (confirm(`Are you sure you want to delete company with code ${code}?`)) {
+    if (confirm("האם אתה בטוח שברצונך למחוק את החברה?")) {
       try {
         deleteCompany(code);
-        toast.info("✅ Company deleted.");
+        toast.success("החברה נמחקה בהצלחה");
         refreshCompanies();
       } catch (error) {
         console.error("❌ Delete company failed:", error);
-        toast.error("❌ Failed to delete company.");
+        toast.error("שגיאה במחיקת החברה");
       }
     }
   };
 
-  // 🔍 **חיפוש דינמי** - מסנן את החברות בזמן אמת
-  const filteredCompanies = companies.filter(
-    (company) =>
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.code.includes(searchTerm)
-  );
-
-  // 🔀 **מיון רשימה** בלחיצה על כותרת העמודה
-  const handleSort = (field: keyof Company) => {
-    const newSortOrder = sortField === field && sortOrder === "asc" ? "desc" : "asc";
-    setSortField(field);
-    setSortOrder(newSortOrder);
-
-    const sortedCompanies = [...companies].sort((a, b) => {
-      if (a[field] < b[field]) return newSortOrder === "asc" ? -1 : 1;
-      if (a[field] > b[field]) return newSortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    setCompanies(sortedCompanies);
+  const handleFormClose = () => {
+    setIsFormOpen(false);
+    setFormData({ name: "" });
+    setEditingCompany(null);
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Manage Companies</h1>
-
-      {/* 🔍 שדה חיפוש */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Search by Code or Name"
-          className="border p-2 w-full rounded"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* 🟢 טופס הוספת חברה */}
-      <div className="mb-6 bg-white shadow p-4 rounded">
-        <h2 className="text-xl font-bold mb-4">Add Company</h2>
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="Company Code (2 digits)"
-            className="border p-2 flex-1"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Company Name"
-            className="border p-2 flex-1"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-        </div>
-        <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleCreate}>
-          Add Company
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h1>ניהול חברות (companiesManagement)</h1>
+        <button 
+          onClick={() => setIsFormOpen(true)} 
+          className={styles.addButton}
+        >
+          הוסף חברה חדשה
         </button>
-      </div>
+      </header>
 
-      {/* 🟡 טבלת חברות */}
-      <table className="w-full border-collapse border border-gray-200">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border p-2 cursor-pointer" onClick={() => handleSort("code")}>
-              Code {sortField === "code" ? (sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
-            </th>
-            <th className="border p-2 cursor-pointer" onClick={() => handleSort("name")}>
-              Name {sortField === "name" ? (sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
-            </th>
-            <th className="border p-2 cursor-pointer" onClick={() => handleSort("createdAt")}>
-              Created At {sortField === "createdAt" ? (sortOrder === "asc" ? "⬆️" : "⬇️") : ""}
-            </th>
-            <th className="border p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredCompanies.map((company) => (
-            <tr key={company.code} className="text-center">
-              <td className="border p-2">{company.code}</td>
-              <td className="border p-2">{company.name}</td>
-              <td className="border p-2">{new Date(company.createdAt).toLocaleString()}</td>
-              <td className="border p-2 space-x-2">
-                <button className="bg-yellow-400 text-white px-3 py-1 rounded" onClick={() => handleUpdate(company.code)}>
-                  Edit
+      {isFormOpen && (
+        <div className={styles.formOverlay} onClick={(e) => {
+          if (e.target === e.currentTarget) handleFormClose();
+        }}>
+          <div className={styles.formContainer}>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleCreate();
+            }} className={styles.form}>
+              <h2>הוסף חברה חדשה</h2>
+              
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  שם החברה:
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ name: e.target.value })}
+                    className={styles.input}
+                    placeholder="הכנס שם חברה"
+                    data-variable-name="companyNameInput"
+                  />
+                </label>
+              </div>
+
+              <div className={styles.formButtons}>
+                <button 
+                  type="button" 
+                  onClick={handleFormClose}
+                  className={styles.cancelButton}
+                >
+                  ביטול
                 </button>
-                <button className="bg-red-500 text-white px-3 py-1 rounded" onClick={() => handleDelete(company.code)}>
-                  Delete
+                <button 
+                  type="submit" 
+                  className={styles.submitButton}
+                >
+                  {editingCompany ? 'עדכן חברה' : 'צור חברה'}
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className={styles.tableContainer}>
+        <div className={styles.tableHeader}>
+          <h2>טבלת ניהול חברות (companiesManagementTable)</h2>
+        </div>
+        <div className={styles.tableWrapper}>
+          <table className={styles.dataTable}>
+            <thead>
+              <tr>
+                <th>קוד חברה (companyCode)</th>
+                <th>שם החברה (companyName)</th>
+                <th>תאריך יצירה</th>
+                <th>פעולות</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companies.map((company) => (
+                <tr key={company.code}>
+                  <td>{company.code}</td>
+                  <td>{company.name}</td>
+                  <td>{new Date(company.createdAt).toLocaleDateString('he-IL')}</td>
+                  <td>
+                    <div className={styles.actionButtons}>
+                      <button
+                        className={styles.editButton}
+                        onClick={() => handleUpdate(company)}
+                      >
+                        ערוך
+                      </button>
+                      <button
+                        className={styles.deleteButton}
+                        onClick={() => handleDelete(company.code)}
+                      >
+                        מחק
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {companies.length === 0 && (
+                <tr>
+                  <td colSpan={4} className={styles.emptyState}>
+                    לא נמצאו חברות במערכת
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

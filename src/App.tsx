@@ -1,123 +1,39 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
-import DashboardPage from "./pages/DashboardPage";
-import CompanyPage from "./pages/CompanyPage";
-import LocationsPage from "./pages/LocationsPage";
-import EmployeesPage from "./pages/EmployeesPage";
-import ActivityLogPage from "./pages/ActivityLogPage";
-import ReportsPage from "./pages/ReportsPage";
-import IncomeReportPage from "./pages/IncomeReportPage";
-import LoginPage from "./pages/LoginPage";
-import VerifyOtpPage from "./pages/VerifyOtpPage";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { AuthProvider } from "./context/AuthContext";
-import LocationManagement from './components/LocationManagement';
-import './App.css';
+import React, { Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { MainLayout } from './layouts/MainLayout';
+import DashboardPage from './pages/DashboardPage';
+import DatabaseManagementPage from './pages/DatabaseManagementPage';
+import CitiesManagement from './pages/CitiesManagement';
+import CompanyPage from './pages/CompanyPage';
+import LocationsPage from './pages/LocationsPage';
+import EmployeeManagement from './components/EmployeeManagement/EmployeeManagement';
+import ActivityLogPage from './pages/ActivityLogPage';
+import ReportsPage from './pages/ReportsPage';
+import IncomeReportPage from './pages/IncomeReportPage';
+import ErrorBoundary from './components/ErrorBoundary';
+import MonthsPage from './pages/MonthsPage';
+import './styles/global.css';
 
-function MainNavigation() {
-  return (
-    <nav className="main-nav glass">
-      <Link to="/dashboard" className="nav-link hover-lift">לוח בקרה</Link>
-      <Link to="/companies" className="nav-link hover-lift">חברות</Link>
-      <Link to="/locations" className="nav-link hover-lift">מיקומים</Link>
-      <Link to="/employees" className="nav-link hover-lift">עובדים</Link>
-      <Link to="/activity-log" className="nav-link hover-lift">יומן פעילות</Link>
-      <Link to="/reports" className="nav-link hover-lift">דוחות</Link>
-      <Link to="/income-report" className="nav-link hover-lift">דוח הכנסות</Link>
-    </nav>
-  );
-}
-
-function HomePage() {
-  return (
-    <div className="home-container card">
-      <h1>מערכת ניהול משאבי אנוש</h1>
-      <p className="subtitle">ברוכים הבאים למערכת הניהול המתקדמת</p>
-      
-      <div className="features-grid">
-        <div className="feature-card glass hover-scale">
-          <h3>ניהול עובדים</h3>
-          <p>ניהול מידע, משכורות ונוכחות של עובדים</p>
-        </div>
-        
-        <div className="feature-card glass hover-scale">
-          <h3>ניהול חברות</h3>
-          <p>ניהול מידע ופרטי החברות במערכת</p>
-        </div>
-        
-        <div className="feature-card glass hover-scale">
-          <h3>ניהול מיקומים</h3>
-          <p>ניהול מיקומי העבודה והסניפים</p>
-        </div>
-        
-        <div className="feature-card glass hover-scale">
-          <h3>דוחות ואנליטיקה</h3>
-          <p>צפייה והפקת דוחות מתקדמים</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+// קבועים של נתיבים
+export const ROUTES = {
+  HOME: '/',
+  DATABASE: '/database',
+  CITIES: '/database/cities',
+  COMPANIES: '/database/companies',
+  LOCATIONS: '/database/locations',
+  EMPLOYEES: '/database/employees',
+  MONTHS: '/database/months',
+  REPORTS: '/reports',
+  ACTIVITY_LOG: '/activity-log'
+} as const;
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="app-container fade-in">
-          <MainNavigation />
-          
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/verify-otp" element={<VerifyOtpPage />} />
-              
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/companies" element={
-                <ProtectedRoute>
-                  <CompanyPage />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/locations/*" element={
-                <ProtectedRoute>
-                  <LocationManagement />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/employees" element={
-                <ProtectedRoute>
-                  <EmployeesPage />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/activity-log" element={
-                <ProtectedRoute>
-                  <ActivityLogPage />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/reports" element={
-                <ProtectedRoute>
-                  <ReportsPage />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/income-report" element={
-                <ProtectedRoute>
-                  <IncomeReportPage />
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </main>
-
+    <ErrorBoundary>
+      <Suspense fallback={<div>טוען...</div>}>
+        <div className="app">
           <ToastContainer
             position="top-right"
             autoClose={3000}
@@ -128,12 +44,29 @@ function App() {
             pauseOnFocusLoss
             draggable
             pauseOnHover
-            theme="light"
-            className="toast-container"
           />
+          <Routes>
+            <Route element={<MainLayout />}>
+              <Route index element={<DashboardPage />} />
+              <Route path={ROUTES.DATABASE}>
+                <Route index element={<DatabaseManagementPage />} />
+                <Route path="cities" element={<CitiesManagement />} />
+                <Route path="companies" element={<CompanyPage />} />
+                <Route path="locations" element={<LocationsPage />} />
+                <Route path="employees" element={<EmployeeManagement />} />
+                <Route path="months" element={<MonthsPage />} />
+              </Route>
+              <Route path={ROUTES.ACTIVITY_LOG} element={<ActivityLogPage />} />
+              <Route path={ROUTES.REPORTS}>
+                <Route index element={<ReportsPage />} />
+                <Route path="income" element={<IncomeReportPage />} />
+              </Route>
+            </Route>
+            <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+          </Routes>
         </div>
-      </Router>
-    </AuthProvider>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 

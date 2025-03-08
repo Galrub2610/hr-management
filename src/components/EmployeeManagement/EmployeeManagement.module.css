@@ -1,0 +1,267 @@
+.container {
+  padding: 2rem;
+  max-width: 1800px;
+  margin: 0 auto;
+  direction: rtl;
+  width: 95%;
+  position: relative;
+  padding-left: 2rem !important;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  min-height: 60px;
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+.header h1 {
+  margin: 0;
+  color: black;
+}
+
+.addButton, .submitButton {
+  background: #10b981;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  font-weight: 500;
+}
+
+.formOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.formContainer {
+  position: relative;
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form h2 {
+  margin: 0 0 20px 0;
+  color: black;
+}
+
+.input, .select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
+.formButtons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.cancelButton {
+  background: #9ca3af;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  font-weight: 500;
+}
+
+.tableContainer {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+  max-height: 600px;
+  overflow: hidden;
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+.tableHeader {
+  padding: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+  background: white;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.tableHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.tableWrapper {
+  max-height: calc(600px - 60px);
+  overflow: auto;
+}
+
+/* עיצוב סליידר מותאם אישית */
+.tableContainer::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tableContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 5px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+  border: 2px solid #f1f1f1;
+}
+
+.tableContainer::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* עיצוב פינת מפגש הסליידרים */
+.tableContainer::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+
+/* עיצוב טבלה */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1000px;
+}
+
+th {
+  position: relative;
+  background: #f9fafb;
+  text-align: right;
+  padding: 16px;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+  color: #1a1a1a;
+  min-height: 60px;
+  white-space: nowrap;
+}
+
+/* הגדרת רוחב קבוע לעמודות */
+th:nth-child(1), td:nth-child(1) { min-width: 100px; } /* קוד עובד */
+th:nth-child(2), td:nth-child(2) { min-width: 200px; } /* שם מלא */
+th:nth-child(3), td:nth-child(3) { min-width: 150px; } /* טלפון */
+th:nth-child(4), td:nth-child(4) { min-width: 120px; } /* אישור עבודה */
+th:nth-child(5), td:nth-child(5) { min-width: 150px; } /* עיר */
+th:nth-child(6), td:nth-child(6) { min-width: 200px; } /* פעולות */
+
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.editButton {
+  background: #3b82f6;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  font-weight: 500;
+}
+
+.deleteButton {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  font-weight: 500;
+}
+
+/* עיצוב כפתור הוספת עובד - זהה לכפתור הוספת מיקום */
+.addButton {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #6c63ff 0%, #5a52d5 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(108, 99, 255, 0.2);
+}
+
+.addButton:hover {
+  background: linear-gradient(135deg, #5a52d5 0%, #4a43c5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
+}
+
+/* הסרת העיצוב הקודם של שמות משתנים */
+[data-variable-name]::before,
+.actionButtons button[data-variable-name]::before,
+*[data-variable-name]::before {
+  display: none !important;
+  content: none !important;
+}
+
+[data-variable-name] {
+  all: unset !important;
+}
+
+/* הסרת ההגדרה הספציפית מה-th */
+th [data-variable-name]::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* תיקון מרווחים בטופס */
+.form-group {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+} 

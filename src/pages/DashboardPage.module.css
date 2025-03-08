@@ -1,0 +1,166 @@
+.container {
+  padding: 2rem;
+  max-width: 1800px;
+  margin: 0 auto;
+  direction: rtl;
+  width: 95%;
+}
+
+.titleWrapper {
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 1rem;
+}
+
+.mainTitle {
+  font-size: 2rem;
+  color: #2d1f5b;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.tableContainer {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 2rem;
+  padding: 1.5rem;
+}
+
+.tableTitle {
+  color: #2d1f5b;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1200px;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.dataTable th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sectionHeader {
+  background-color: #6c63ff !important;
+  color: white;
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 1rem;
+  letter-spacing: 0.5px;
+}
+
+.dataTable tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.dataTable tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+.emptyState {
+  padding: 2rem !important;
+  text-align: center;
+  color: #666;
+}
+
+/* עיצוב תאי הטבלה לפי עמודות */
+.dataTable td:nth-child(1) { /* חברות ניהול */
+  min-width: 200px;
+}
+
+.dataTable td:nth-child(2) { /* כתובת */
+  min-width: 250px;
+}
+
+.dataTable td:nth-child(3) { /* ימי עבודה */
+  min-width: 200px;
+}
+
+.dataTable td:nth-child(4) { /* פרטי תשלום */
+  min-width: 300px;
+}
+
+.dataTable td:nth-child(5) { /* סכום לגבייה */
+  min-width: 150px;
+  font-weight: 600;
+  color: #2d1f5b;
+}
+
+/* עיצוב בסגנון אקסל */
+.excelTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.9rem;
+}
+
+.excelTable th,
+.excelTable td {
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  text-align: center;
+}
+
+.excelTable th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  color: #1f2937;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 2px solid #d1d5db;
+}
+
+.excelTable tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.excelTable tbody tr:hover {
+  background-color: #f3f4f6;
+}
+
+/* מעבר עכבר על תאים */
+.excelTable td:hover {
+  background-color: #e5e7eb;
+  cursor: default;
+}
+
+/* קווים אנכיים מודגשים */
+.excelTable th:not(:last-child),
+.excelTable td:not(:last-child) {
+  border-right: 2px solid #d1d5db;
+}
+
+/* גלילה אופקית עם קיבוע כותרות */
+@media screen and (max-width: 1024px) {
+  .tableContainer {
+    overflow-x: auto;
+    margin: 0 -1rem;
+    padding: 1rem;
+  }
+  
+  .excelTable {
+    min-width: 800px;
+  }
+} 

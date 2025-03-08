@@ -8,33 +8,44 @@ import {
 } from '../services/EmployeeService';
 import { getAllLocations } from '../services/LocationService'; // ✅ הוספנו רשימת מקומות
 import { toast } from 'react-toastify';
-
-interface Employee {
-  code: string;      // 3 ספרות
-  name: string;
-  locationId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Employee } from '../types/models';
+import styles from './EmployeesPage.module.css';
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [locations, setLocations] = useState<{ code: string; address: string }[]>([]);
-  const [form, setForm] = useState({ code: '', name: '', locationId: '' });
+  const [form, setForm] = useState({ 
+    fullName: '', 
+    phone: '',
+    workPermit: true,
+    city: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // ✅ טעינת עובדים ומקומות
   useEffect(() => {
-    try {
-      const emps = getAllEmployees();
-      const locs = getAllLocations();
-      console.log("📊 Loaded employees:", emps);
-      console.log("📍 Loaded locations:", locs);
-      setEmployees(emps);
-      setLocations(locs);
-    } catch (error) {
-      console.error("❌ Failed to load employees or locations:", error);
-      toast.error("❌ Failed to load data.");
-    }
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const emps = getAllEmployees();
+        const locs = getAllLocations();
+        console.log("📊 Loaded employees:", emps);
+        console.log("📍 Loaded locations:", locs);
+        setEmployees(emps);
+        setLocations(locs.map(loc => ({
+          code: loc.code,
+          address: `${loc.street} ${loc.streetNumber}, ${loc.city}`
+        })));
+      } catch (error) {
+        console.error("❌ Failed to load employees or locations:", error);
+        toast.error("❌ Failed to load data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   // ✅ רענון הטבלה
@@ -44,84 +55,64 @@ export default function EmployeesPage() {
     setEmployees(data);
   };
 
-  // ✅ בדיקות תקינות קלט עם כפילות וקיום מקום
+  // ✅ בדיקות תקינות קלט
   const validateForm = () => {
-    if (!/^\d{3}$/.test(form.code)) {
-      toast.error("❌ Employee code must be exactly 3 digits.");
-      return false;
-    }
-    if (form.name.trim() === '') {
+    if (form.fullName.trim() === '') {
       toast.error("❌ Name cannot be empty.");
       return false;
     }
-    if (!locations.some(loc => loc.code === form.locationId)) {
-      toast.error("❌ Invalid Location ID.");
-      return false;
-    }
-    if (employees.some(emp => emp.code === form.code)) {
-      toast.error("❌ Employee code already exists.");
+    if (form.phone && !/^\d+$/.test(form.phone)) {
+      toast.error("❌ Phone number must contain only digits.");
       return false;
     }
     return true;
   };
 
   // ✅ צור עובד חדש
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!validateForm()) return;
 
+    setIsLoading(true);
     try {
-      const newEmployee = createEmployee({
-        code: form.code,
-        name: form.name,
-        locationId: form.locationId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      const newEmployee = createEmployee(form);
       console.log("✅ Created employee:", newEmployee);
       toast.success("✅ Employee created successfully!");
       refreshEmployees();
-      setForm({ code: '', name: '', locationId: '' });
+      setForm({ 
+        fullName: '', 
+        phone: '',
+        workPermit: true,
+        city: ''
+      });
     } catch (error) {
       console.error("❌ Create employee failed:", error);
       toast.error("❌ Failed to create employee.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // ✅ עדכן עובד עם בדיקת כפילות
-  const handleUpdate = (code: string) => {
+  // ✅ עדכן עובד
+  const handleUpdate = async (code: string) => {
     const current = employees.find(emp => emp.code === code);
     if (!current) {
       toast.error("❌ Employee not found.");
       return;
     }
 
-    const newCode = prompt("Enter new employee code (3 digits):", current.code);
-    const newName = prompt("Enter new name:", current.name);
-    const newLocationId = prompt("Enter new Location ID:", current.locationId);
+    const newName = prompt("Enter new name:", current.fullName);
+    const newPhone = prompt("Enter new phone:", current.phone || '');
+    const newCity = prompt("Enter new city:", current.city || '');
 
-    if (newCode && !/^\d{3}$/.test(newCode)) {
-      toast.error("❌ Employee code must be exactly 3 digits.");
-      return;
-    }
-    if (newCode && newCode !== code && employees.some(emp => emp.code === newCode)) {
-      toast.error("❌ New employee code already exists.");
-      return;
-    }
-    if (newLocationId && !locations.some(loc => loc.code === newLocationId)) {
-      toast.error("❌ Invalid Location ID.");
-      return;
-    }
-
-    if (newCode && newName && newLocationId) {
+    if (newName && newPhone && newCity) {
+      setIsLoading(true);
       try {
-        const updatedEmployee = updateEmployee(
-          code,
-          {
-            name: newName,
-            locationId: newLocationId,
-          },
-          newCode
-        );
+        const updatedEmployee = updateEmployee(code, {
+          fullName: newName,
+          phone: newPhone,
+          city: newCity,
+          workPermit: current.workPermit
+        });
         if (updatedEmployee) {
           console.log("🔄 Updated employee:", updatedEmployee);
           toast.success("✅ Employee updated!");
@@ -130,13 +121,16 @@ export default function EmployeesPage() {
       } catch (error) {
         console.error("❌ Update employee failed:", error);
         toast.error("❌ Failed to update employee.");
+      } finally {
+        setIsLoading(false);
       }
     }
   };
 
   // ✅ מחק עובד
-  const handleDelete = (code: string) => {
+  const handleDelete = async (code: string) => {
     if (confirm(`Are you sure you want to delete employee with code ${code}?`)) {
+      setIsLoading(true);
       try {
         const success = deleteEmployee(code);
         if (success) {
@@ -149,89 +143,176 @@ export default function EmployeesPage() {
       } catch (error) {
         console.error("❌ Delete employee failed:", error);
         toast.error("❌ Failed to delete employee.");
+      } finally {
+        setIsLoading(false);
       }
     }
   };
 
-  return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Manage Employees</h1>
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleCreate();
+    setIsModalOpen(false);
+  };
 
-      {/* 🟢 טופס הוספת עובד */}
-      <div className="mb-6 bg-white shadow p-4 rounded">
-        <h2 className="text-xl font-bold mb-4">Add Employee</h2>
-        <div className="flex space-x-4 mb-4">
-          <input
-            type="text"
-            placeholder="Employee Code (3 digits)"
-            className="border p-2 flex-1"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value })}
-          />
-          <input
-            type="text"
-            placeholder="Name"
-            className="border p-2 flex-1"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <select
-            className="border p-2 flex-1"
-            value={form.locationId}
-            onChange={(e) => setForm({ ...form, locationId: e.target.value })}
-          >
-            <option value="">Select Location</option>
-            {locations.map(loc => (
-              <option key={loc.code} value={loc.code}>
-                {loc.address} (#{loc.code})
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          className="bg-green-500 text-white px-4 py-2 rounded"
-          onClick={handleCreate}
+  if (isLoading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <div className={styles.loadingText}>Loading...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.headerTitle}>
+        <h1>ניהול עובדים</h1>
+      </div>
+
+      <div className={styles.addButtonWrapper}>
+        <button 
+          type="button"
+          className={styles.addButton}
+          onClick={() => setIsModalOpen(true)}
+          disabled={isLoading}
         >
-          Add Employee
+          הוסף עובד חדש
         </button>
       </div>
 
-      {/* 🟡 טבלת עובדים */}
-      <table className="w-full border-collapse border border-gray-200">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border p-2">Code</th>
-            <th className="border p-2">Name</th>
-            <th className="border p-2">Location</th>
-            <th className="border p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {employees.map((emp) => (
-            <tr key={emp.code} className="text-center">
-              <td className="border p-2">{emp.code}</td>
-              <td className="border p-2">{emp.name}</td>
-              <td className="border p-2">
-                {locations.find(loc => loc.code === emp.locationId)?.address || emp.locationId}
-              </td>
-              <td className="border p-2 space-x-2">
-                <button
-                  className="bg-yellow-400 text-white px-3 py-1 rounded"
-                  onClick={() => handleUpdate(emp.code)}
+      {/* Modal Form */}
+      {isModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <form onSubmit={handleFormSubmit} className={styles.form}>
+              <h2>הוספת עובד חדש</h2>
+              
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  שם מלא
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="הכנס שם מלא"
+                    value={form.fullName}
+                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  מספר טלפון
+                  <input
+                    type="tel"
+                    className={styles.input}
+                    placeholder="הכנס מספר טלפון"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  אישור עבודה
+                  <select
+                    className={styles.input}
+                    value={form.workPermit ? "true" : "false"}
+                    onChange={(e) => setForm({ ...form, workPermit: e.target.value === "true" })}
+                  >
+                    <option value="true">כן</option>
+                    <option value="false">לא</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>
+                  עיר מגורים
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="הכנס עיר מגורים"
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  />
+                </label>
+              </div>
+
+              <div className={styles.formButtons}>
+                <button 
+                  type="submit" 
+                  className={styles.submitButton}
+                  disabled={isLoading}
                 >
-                  Edit
+                  צור עובד
                 </button>
-                <button
-                  className="bg-red-500 text-white px-3 py-1 rounded"
-                  onClick={() => handleDelete(emp.code)}
+                <button 
+                  type="button" 
+                  className={styles.cancelButton}
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={isLoading}
                 >
-                  Delete
+                  ביטול
                 </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* טבלת עובדים */}
+      <section className={styles.tableSection}>
+        <div className={styles.tableContainer}>
+          <div className={styles.tableTitleWrapper}>
+            <h2>טבלת ניהול עובדים (employeesDataTable)</h2>
+          </div>
+          <div className={styles.tableWrapper}>
+            <table className={styles.dataTable}>
+              <thead>
+                <tr>
+                  <th>קוד עובד (employeeCode)</th>
+                  <th>שם מלא (fullName)</th>
+                  <th>מספר טלפון (phoneNumber)</th>
+                  <th>אישור עבודה (workPermit)</th>
+                  <th>עיר מגורים (city)</th>
+                  <th>פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((emp) => (
+                  <tr key={emp.code}>
+                    <td className={styles.tableCell}>{emp.code}</td>
+                    <td className={styles.tableCell}>{emp.fullName}</td>
+                    <td className={styles.tableCell}>{emp.phone || '-'}</td>
+                    <td className={styles.tableCell}>{emp.workPermit ? 'כן' : 'לא'}</td>
+                    <td className={styles.tableCell}>{emp.city || '-'}</td>
+                    <td className={styles.actionCell}>
+                      <button
+                        type="button"
+                        className={styles.editButton}
+                        onClick={() => handleUpdate(emp.code)}
+                        disabled={isLoading}
+                      >
+                        ערוך
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.deleteButton}
+                        onClick={() => handleDelete(emp.code)}
+                        disabled={isLoading}
+                      >
+                        מחק
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

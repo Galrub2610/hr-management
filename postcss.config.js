@@ -1,10 +1,9 @@
 // postcss.config.js
-import tailwindcssPostcss from '@tailwindcss/postcss';
-import autoprefixer from 'autoprefixer';
-
 export default {
-  plugins: [
-    tailwindcssPostcss(),
-    autoprefixer(),
-  ],
+  plugins: {
+    'postcss-import': {},
+    'tailwindcss/nesting': 'postcss-nesting',
+    tailwindcss: {},
+    autoprefixer: {},
+  }
 };

@@ -1,0 +1,315 @@
+.container {
+  padding: 1rem;
+  width: auto;
+  max-width: 100%;
+  direction: rtl;
+}
+
+.container h1 {
+  margin-bottom: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0 1rem;
+}
+
+.header h1 {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.addButton {
+  background: #2563eb;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.tableContainer {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+}
+
+.table {
+  width: auto;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 8px;
+  text-align: right;
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* הגדרות ספציפיות לכל עמודה */
+/* עמודת מזהה */
+.table th:first-child,
+.table td:first-child {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+}
+
+/* עמודת שם העיר */
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+/* עמודת קוד עיר */
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+/* עמודת פעולות */
+.table th:last-child,
+.table td:last-child {
+  width: 100px;
+  min-width: 100px;
+  max-width: 100px;
+}
+
+.table th {
+  background: #f9fafb;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.actionButtons button {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  cursor: pointer;
+}
+
+.actionButtons button:hover {
+  background: #f9fafb;
+}
+
+.citiesTable {
+  all: unset;
+  display: table;
+}
+
+.columnHeader {
+  all: unset;
+  display: table-cell;
+  padding: 8px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.tableContainer::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.tableContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 5px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+  border: 2px solid #f1f1f1;
+}
+
+.tableContainer::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.tableContainer::-webkit-scrollbar-corner {
+  background: #f1f1f1;
+}
+
+.variableName {
+  display: inline-block;
+  font-size: 11px;
+  color: #2d3748;
+  background-color: #edf2f7;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+  font-style: italic;
+  border: 1px solid #a0aec0;
+  z-index: 10;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.databaseTitle {
+  background: #f8fafc;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px 8px 0 0;
+  margin-bottom: 0;
+}
+
+.databaseTitle h2 {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2d3748;
+  padding-top: 1.5rem;
+}
+
+.databaseTitle .variableName {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 12px;
+  color: #666;
+  background-color: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 0;
+  font-style: italic;
+  border: 1px solid #cbd5e0;
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerContent > div:first-child {
+  font-weight: 600;
+}
+
+.actionsGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  position: relative;
+}
+
+.modalContent h2 {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2rem;
+}
+
+.modalContent h2 .variableName {
+  margin-right: auto;
+}
+
+.formGroup {
+  margin-bottom: 2rem;
+}
+
+.formGroup label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.formGroup label .variableName {
+  margin-right: auto;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.formActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.formActions button {
+  position: relative;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submitButton {
+  background: #4CAF50;
+  color: white;
+}
+
+.cancelButton {
+  background: #ff4d6d;
+  color: white;
+}
+
+.formActions button .variableName {
+  position: absolute;
+  top: -20px;
+  right: 0;
+  white-space: nowrap;
+} 

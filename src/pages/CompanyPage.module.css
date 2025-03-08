@@ -1,0 +1,210 @@
+.container {
+  padding: 2rem;
+  max-width: 1800px;
+  margin: 0 auto;
+  direction: rtl;
+  width: 95%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.header h1 {
+  margin: 0;
+  color: #2d1f5b;
+  font-size: 2rem;
+}
+
+/* כפתור הוספת חברה - זהה לכפתור הוספת מיקום */
+.addButton {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #6c63ff 0%, #5a52d5 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.addButton:hover {
+  background: linear-gradient(135deg, #5a52d5 0%, #4a43c5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
+}
+
+/* טופס מודאל */
+.formOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.formContainer {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 500px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form h2 {
+  margin: 0 0 1.5rem 0;
+  color: #2d1f5b;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.formGroup {
+  margin-bottom: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #f9fafb;
+}
+
+.formLabel {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 500;
+  width: 100%;
+}
+
+.input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background: #ffffff;
+  width: 100%;
+  outline: none;
+}
+
+.input:focus {
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.1);
+}
+
+.input::placeholder {
+  color: #9ca3af;
+}
+
+.formButtons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.submitButton, .cancelButton {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submitButton {
+  background: #6c63ff;
+  color: white;
+  border: none;
+}
+
+.cancelButton {
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+/* טבלה */
+.tableContainer {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.tableHeader {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.tableHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d1f5b;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.dataTable th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.editButton,
+.deleteButton {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.editButton {
+  background: #10b981;
+  color: white;
+}
+
+.deleteButton {
+  background: #ef4444;
+  color: white;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+} 

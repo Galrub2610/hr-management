@@ -2,9 +2,9 @@
  * סוגי החישוב האפשריים למיקום עבודה
  */
 export enum CalculationType {
-  HOURLY = 'hourly',           // חישוב שעתי
-  GLOBAL = 'global',           // חישוב גלובלי
-  DICTATED = 'dictated'        // חישוב שעתי מוכתב
+  HOURLY = 'HOURLY',
+  GLOBAL = 'GLOBAL',
+  DICTATED = 'DICTATED'
 }
 
 /**
@@ -20,6 +20,8 @@ export enum WeekDays {
   SATURDAY = 'שבת'
 }
 
+export type DayName = 'SUNDAY' | 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY';
+
 /**
  * מידע על יום עבודה ספציפי - משמש לחישוב שעתי
  * @property day - יום בשבוע
@@ -27,9 +29,16 @@ export enum WeekDays {
  * @property isActive - האם יום זה פעיל
  */
 export interface WorkDay {
-  day: WeekDays;
-  hours: number;
-  isActive: boolean;
+  dayName: DayName;
+  hours?: number;
+}
+
+/**
+ * חברת ניהול
+ */
+export interface ManagementCompany {
+  code: string;
+  name: string;
 }
 
 /**
@@ -41,9 +50,13 @@ export interface BaseLocation {
   city: string;                // עיר
   street: string;              // רחוב
   streetNumber: string;        // מספר בית
+  cityCode: string;
   calculationType: CalculationType;  // סוג החישוב
   createdAt: Date;            // תאריך יצירה
   updatedAt: Date;            // תאריך עדכון אחרון
+  createdBy: string;
+  workDays: WorkDay[];
+  managementCompany?: ManagementCompany; // חברת ניהול (אופציונלי)
 }
 
 /**
@@ -52,9 +65,7 @@ export interface BaseLocation {
  */
 export interface HourlyLocation extends BaseLocation {
   calculationType: CalculationType.HOURLY;
-  workDays: string[];         // ימי עבודה
   hourlyRate: number;          // תעריף לשעה בש"ח
-  workHours: { [key: string]: number };
 }
 
 /**
@@ -63,8 +74,7 @@ export interface HourlyLocation extends BaseLocation {
  */
 export interface GlobalLocation extends BaseLocation {
   calculationType: CalculationType.GLOBAL;
-  workDays: string[];       // ימי עבודה
-  monthlyPayment: number;      // תשלום חודשי קבוע בש"ח
+  globalAmount: number;
 }
 
 /**
@@ -93,6 +103,7 @@ export interface LocationFormState {
   city: string;
   street: string;
   streetNumber: string;
+  cityCode: string;
   
   // שלב 4: סוג חישוב
   calculationType?: CalculationType;
@@ -102,8 +113,7 @@ export interface LocationFormState {
   hourlyRate?: number;
   
   // שלב 6: פרטי חישוב גלובלי
-  selectedDays?: WeekDays[];
-  monthlyPayment?: number;
+  globalAmount?: number;
   
   // שלב 7: פרטי חישוב שעתי מוכתב
   dictatedHours?: number;
@@ -113,8 +123,14 @@ export interface LocationFormState {
  * נתונים נדרשים ליצירת מיקום חדש
  */
 export interface CreateLocationDto {
-  city: string;
   street: string;
   streetNumber: string;
+  city: string;
+  cityCode: string;
   calculationType: CalculationType;
+  workDays: WorkDay[];
+  hourlyRate?: number;
+  globalAmount?: number;
+  dictatedHours?: number;
+  managementCompany?: ManagementCompany; // חברת ניהול (אופציונלי)
 } 

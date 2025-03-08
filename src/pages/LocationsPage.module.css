@@ -1,0 +1,312 @@
+.container {
+  padding: 2rem;
+  max-width: 1800px;
+  margin: 0 auto;
+  direction: rtl;
+  width: 95%;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+.header h1 {
+  margin: 0;
+  color: #2d1f5b;
+  font-size: 2rem;
+}
+
+.addButton {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #6c63ff 0%, #5a52d5 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.addButton:hover {
+  background: linear-gradient(135deg, #5a52d5 0%, #4a43c5 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
+}
+
+/* טבלה */
+.tableContainer {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.tableContainer :global(.table-title) {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 2;
+}
+
+/* יצירת מיכל עם גלילה */
+.tableWrapper {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1200px; /* מבטיח רוחב מינימלי לטבלה */
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  vertical-align: middle;
+  line-height: 1.5;
+}
+
+.dataTable th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* עיצוב תאי הטבלה לפי עמודות */
+.dataTable td:nth-child(1) { /* קוד מיקום */
+  min-width: 100px;
+}
+
+.dataTable td:nth-child(2) { /* רחוב */
+  min-width: 150px;
+}
+
+.dataTable td:nth-child(3) { /* מספר רחוב */
+  min-width: 100px;
+}
+
+.dataTable td:nth-child(4) { /* עיר */
+  min-width: 150px;
+}
+
+.dataTable td:nth-child(5) { /* ימי עבודה */
+  min-width: 200px;
+}
+
+.dataTable td:nth-child(6) { /* סוג חישוב */
+  min-width: 120px;
+}
+
+.dataTable td:nth-child(7) { /* פרטי חישוב */
+  min-width: 300px;
+}
+
+.dataTable td:nth-child(8) { /* חברת ניהול */
+  min-width: 200px;
+}
+
+.dataTable td:nth-child(9) { /* פעולות */
+  min-width: 120px;
+}
+
+.calculationDetailsCell {
+  padding: 0 !important;
+}
+
+.calculationDetails {
+  padding: 1rem;
+}
+
+.detailsGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.detailsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.columnHeader {
+  font-weight: 600;
+  padding: 0.5rem;
+  background-color: #f9fafb;
+  border-radius: 4px;
+}
+
+.detailRow {
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.workdaysCell {
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* עיצוב כפתורי פעולות */
+.actionsGroup {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.editButton,
+.deleteButton {
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.editButton {
+  background-color: var(--success);
+  color: white;
+}
+
+.deleteButton {
+  background-color: var(--error);
+  color: white;
+}
+
+/* מצב ריק */
+.emptyState {
+  padding: 2rem !important;
+  text-align: center;
+  color: #666;
+}
+
+/* מודל */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 95%;
+  max-width: 1000px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* עיצוב גלובלי לטבלת ימי עבודה */
+:global(.workdays-grid) {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+:global(.workdays-headers) {
+  font-weight: 500;
+}
+
+:global(.workdays-headers.two-columns),
+:global(.workdays-content.two-columns) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+:global(.days-header),
+:global(.hours-header) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+:global(.days-column),
+:global(.hours-column) {
+  text-align: center;
+}
+
+:global(.day-row),
+:global(.hours-row) {
+  text-align: center;
+}
+
+.formGroup {
+  margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+}
+
+.submitButton,
+.resetButton {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.submitButton {
+  background: #6c63ff;
+  color: white;
+  margin-right: 1rem;
+}
+
+.submitButton:hover {
+  background: #5a52d5;
+}
+
+.resetButton {
+  background: #f3f0ff;
+  color: #6c63ff;
+}
+
+.resetButton:hover {
+  background: #e5e0ff;
+} 
