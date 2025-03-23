@@ -1,28 +1,48 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '../App';
+import { Outlet, NavLink } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
+import styles from './DatabaseManagementPage.module.css';
 
 const DatabaseManagementPage: React.FC = () => {
-  const sections = [
-    { path: 'cities', label: 'ניהול ערים' },
-    { path: 'companies', label: 'ניהול חברות' },
-    { path: 'locations', label: 'ניהול מיקומים' },
-    { path: 'employees', label: 'ניהול עובדים' }
-  ];
-
   return (
-    <div className="container mx-auto">
-      <h1 className="mb-6 text-2xl font-bold">ניהול מסד נתונים</h1>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {sections.map((section) => (
-          <Link
-            key={section.path}
-            to={`${ROUTES.DATABASE}/${section.path}`}
-            className="rounded-lg bg-white p-6 shadow-lg transition-transform hover:scale-105"
-          >
-            <h2 className="text-xl font-semibold">{section.label}</h2>
-          </Link>
-        ))}
+    <div className={styles.container}>
+      <h1>ניהול מסד נתונים</h1>
+      <div className={styles.navigation}>
+        <NavLink 
+          to={ROUTES.CITIES}
+          className={({ isActive }) => 
+            isActive ? `${styles.navLink} ${styles.active}` : styles.navLink
+          }
+        >
+          ניהול ערים
+        </NavLink>
+        <NavLink 
+          to={ROUTES.COMPANIES}
+          className={({ isActive }) => 
+            isActive ? `${styles.navLink} ${styles.active}` : styles.navLink
+          }
+        >
+          ניהול חברות
+        </NavLink>
+        <NavLink 
+          to={ROUTES.LOCATIONS}
+          className={({ isActive }) => 
+            isActive ? `${styles.navLink} ${styles.active}` : styles.navLink
+          }
+        >
+          ניהול מיקומים
+        </NavLink>
+        <NavLink 
+          to={ROUTES.EMPLOYEES}
+          className={({ isActive }) => 
+            isActive ? `${styles.navLink} ${styles.active}` : styles.navLink
+          }
+        >
+          ניהול עובדים
+        </NavLink>
+      </div>
+      <div className={styles.content}>
+        <Outlet />
       </div>
     </div>
   );

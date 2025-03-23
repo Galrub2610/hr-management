@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Home, Building, MapPin, Users, FileText, BarChart, X as CloseIcon, Database, Calendar } from "lucide-react";
 import { useState } from "react";
-import { ROUTES } from '../App';
+import { ROUTES } from '../constants/routes';
 
 const Sidebar = () => {
   const location = useLocation();

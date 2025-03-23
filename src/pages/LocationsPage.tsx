@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import AddLocationForm from "../components/AddLocationForm/AddLocationForm";
-import { generateUniqueLocationCode, formatCurrency } from "../utils/locationUtils";
+import { generateLocationCode, formatCurrency, isHourlyLocation, isGlobalLocation, isDictatedLocation, isValidLocationCode } from "../utils/locationUtils";
 import { getAllLocations, createLocation, deleteLocation, updateLocation } from "../services/LocationService";
 import { getAllCities, City } from '../services/CitiesService';
 import { getAllCompanies } from '../services/CompanyService';
@@ -12,19 +12,26 @@ import {
   HourlyLocation, 
   GlobalLocation, 
   DictatedLocation,
-  WorkDay
+  WorkDay,
+  DayName,
+  LocationFormData,
+  ManagementCompany
 } from "../types/location.types";
+import { Company } from '../types/company.types';
 import styles from './LocationsPage.module.css';
+import { showSuccessToast, showErrorToast } from '../utils/toast';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 
 // פונקציית עזר להמרת ימים לעברית
-const daysMap: { [key: string]: string } = {
-  'SUNDAY': 'ראשון',
-  'MONDAY': 'שני',
-  'TUESDAY': 'שלישי',
-  'WEDNESDAY': 'רביעי',
-  'THURSDAY': 'חמישי',
-  'FRIDAY': 'שישי',
-  'SATURDAY': 'שבת'
+const daysMap: { [key in DayName]: string } = {
+  [DayName.SUNDAY]: 'ראשון',
+  [DayName.MONDAY]: 'שני',
+  [DayName.TUESDAY]: 'שלישי',
+  [DayName.WEDNESDAY]: 'רביעי',
+  [DayName.THURSDAY]: 'חמישי',
+  [DayName.FRIDAY]: 'שישי',
+  [DayName.SATURDAY]: 'שבת'
 };
 
 interface WorkDayDisplay {
@@ -36,202 +43,333 @@ const formatWorkDays = (workDays: WorkDay[] | undefined, calculationType: Calcul
   if (!workDays || !Array.isArray(workDays)) return '';
 
   const isHourly = calculationType === CalculationType.HOURLY;
-
-  return (
-    `<div class="workdays-grid">
-      <div class="workdays-headers ${isHourly ? 'two-columns' : 'one-column'}">
-        <div class="days-header">
-          <span>ימים</span>
-        </div>
-        ${isHourly ? `
-        <div class="hours-header">
-          <span>כמות שעות</span>
-        </div>
-        ` : ''}
-      </div>
-      <div class="workdays-content ${isHourly ? 'two-columns' : 'one-column'}">
-        <div class="days-column">
-          <div class="column-title"></div>
-          ${workDays.map(workDay => 
-            `<div class="day-row">${daysMap[workDay.dayName] || workDay.dayName}</div>`
-          ).join('')}
-        </div>
-        ${isHourly ? `
-        <div class="hours-column">
-          <div class="column-title"></div>
-          ${workDays.map(workDay => 
-            `<div class="hours-row">${workDay.hours || 0}</div>`
-          ).join('')}
-        </div>
-        ` : ''}
-      </div>
-    </div>`
-  );
+  return workDays.map(day => ({
+    dayName: daysMap[day.dayName],
+    hours: isHourly ? day.hours : undefined
+  }));
 };
 
-export default function LocationsPage() {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null);
+// הוספת פונקציית המרה
+const convertToCompanyArray = (managementCompanies: ManagementCompany[]): Company[] => {
+  return managementCompanies.map(mc => ({
+    ...mc,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }));
+};
 
-  // טעינת נתונים התחלתית
+interface LocationRow {
+  id: string;
+  code: string;
+  street: string;
+  streetNumber: string;
+  city: string;
+  cityCode: string;
+  calculationType: CalculationType;
+  workDays: WorkDay[];
+  managementCompany?: ManagementCompany;
+  hourlyRate?: number;
+  globalAmount?: number;
+  dictatedHours?: number;
+}
+
+const generateUniqueLocationCode = (existingLocations: Location[]): string => {
+  try {
+    // המרת כל הקודים הקיימים למערך של מספרים
+    const existingCodes = existingLocations
+      .map(loc => {
+        // וידוא שהקוד הוא מספרי ובן 4 ספרות
+        const code = loc.code?.toString().replace(/\D/g, ''); // להסיר תווים שאינם מספרים
+        return code?.length === 4 ? parseInt(code) : null;
+      })
+      .filter((code): code is number => code !== null && !isNaN(code));
+
+    // יצירת קוד חדש
+    let newCode: number;
+    do {
+      // יצירת מספר רנדומלי בין 1000 ל-9999
+      newCode = 1000 + Math.floor(Math.random() * 9000);
+      
+      // וידוא שהמספר הוא בן 4 ספרות
+      if (newCode < 1000) newCode = 1000;
+      if (newCode > 9999) newCode = 9999;
+      
+    } while (existingCodes.includes(newCode));
+
+    // החזרת הקוד כמחרוזת עם אפסים מובילים
+    return newCode.toString().padStart(4, '0');
+  } catch (error) {
+    console.error("❌ Error generating location code:", error);
+    throw new Error("שגיאה ביצירת קוד מיקום");
+  }
+};
+
+const LocationsPage: React.FC = () => {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [cities, setCities] = useState<City[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    try {
+      console.log('Starting data load process...');
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('Fetching data from all services...');
+      const [locationsData, citiesData, companiesData] = await Promise.all([
+        getAllLocations(),
+        getAllCities(),
+        getAllCompanies()
+      ]);
+      console.log('Data fetched successfully:', {
+        locationsCount: locationsData.length,
+        citiesCount: citiesData.length,
+        companiesCount: companiesData.length
+      });
+
+      const invalidCompanies = companiesData.filter(c => !c.code || c.code.length !== 4);
+      if (invalidCompanies.length > 0) {
+        console.warn('נמצאו חברות עם קוד לא תקין:', invalidCompanies);
+      }
+
+      setLocations(locationsData);
+      setCities(citiesData);
+      setCompanies(companiesData);
+      console.log('State updated with new data');
+    } catch (error) {
+      console.error('Error in loadData:', error);
+      setError('שגיאה בטעינת הנתונים');
+    } finally {
+      setIsLoading(false);
+      console.log('Loading process completed');
+    }
+  };
+
   useEffect(() => {
-    loadLocations();
-    loadCities();
-    loadCompanies();
+    loadData();
   }, []);
 
-  // טעינת רשימת המיקומים
-  const loadLocations = async () => {
-    try {
-      const locs = await getAllLocations();
-      setLocations(locs);
-    } catch (error) {
-      console.error("❌ Failed to load locations:", error);
-      toast.error("❌ שגיאה בטעינת המיקומים");
-    }
-  };
-
-  // טעינת רשימת הערים
-  const loadCities = async () => {
-    try {
-      const citiesData = await getAllCities();
-      setCities(citiesData);
-    } catch (error) {
-      console.error('Error loading cities:', error);
-      toast.error("❌ שגיאה בטעינת רשימת הערים");
-    }
-  };
-
-  // טעינת רשימת החברות
-  const loadCompanies = async () => {
-    try {
-      const companiesData = await getAllCompanies();
-      setCompanies(companiesData);
-    } catch (error) {
-      console.error('Error loading companies:', error);
-      toast.error("❌ שגיאה בטעינת רשימת החברות");
-    }
-  };
-
   const handleEdit = (location: Location) => {
-    setEditingLocation(location);
-    setIsAddFormOpen(true);
-  };
+    try {
+      console.log('Editing location:', location);
+      
+      if (!location.id) {
+        throw new Error('מיקום ללא מזהה');
+      }
+      
+      // יצירת אובייקט בסיס עם שדות משותפים
+      const baseLocation = {
+        id: location.id,
+        code: location.code || '',
+        street: location.street || '',
+        streetNumber: location.streetNumber || '',
+        cityCode: location.cityCode || '',
+        city: location.city || '',
+        calculationType: location.calculationType,
+        workDays: Array.isArray(location.workDays) ? location.workDays : [],
+        managementCompany: location.managementCompany
+      };
 
-  const handleSubmit = async (formData: any) => {
-    if (editingLocation) {
-      await handleUpdate(formData);
-    } else {
-      await handleAddLocation(formData);
+      // הוספת שדות ספציפיים לפי סוג החישוב
+      let defaultLocation: Location;
+      
+      switch (location.calculationType) {
+        case CalculationType.HOURLY:
+          defaultLocation = {
+            ...baseLocation,
+            calculationType: CalculationType.HOURLY,
+            hourlyRate: (location as HourlyLocation).hourlyRate || 0
+          } as HourlyLocation;
+          break;
+        
+        case CalculationType.GLOBAL:
+          defaultLocation = {
+            ...baseLocation,
+            calculationType: CalculationType.GLOBAL,
+            globalAmount: (location as GlobalLocation).globalAmount || 0
+          } as GlobalLocation;
+          break;
+        
+        case CalculationType.DICTATED:
+          defaultLocation = {
+            ...baseLocation,
+            calculationType: CalculationType.DICTATED,
+            dictatedHours: (location as DictatedLocation).dictatedHours || 0
+          } as DictatedLocation;
+          break;
+        
+        default:
+          throw new Error('סוג חישוב לא תקין');
+      }
+
+      console.log('Default location prepared:', defaultLocation);
+
+      // המרה לפורמט הטופס
+      const formData: LocationFormData = {
+        street: defaultLocation.street,
+        streetNumber: defaultLocation.streetNumber,
+        cityCode: defaultLocation.cityCode,
+        managementCompanyCode: defaultLocation.managementCompany?.code || '',
+        calculationType: defaultLocation.calculationType,
+        weekDays: defaultLocation.workDays.map(day => day.dayName),
+        dayHours: defaultLocation.workDays.map(day => ({
+          dayId: day.dayName,
+          hours: day.hours || 0
+        })),
+        hourlyRate: isHourlyLocation(defaultLocation) ? defaultLocation.hourlyRate.toString() : '0',
+        globalAmount: isGlobalLocation(defaultLocation) ? defaultLocation.globalAmount.toString() : '0',
+        dictatedHours: isDictatedLocation(defaultLocation) ? defaultLocation.dictatedHours.toString() : '0'
+      };
+
+      console.log('Form data prepared:', formData);
+      setSelectedLocation(defaultLocation);
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error in handleEdit:', error);
+      showErrorToast('שגיאה בטעינת נתוני המיקום');
     }
   };
 
-  const handleUpdate = async (formData: any) => {
-    if (!editingLocation) return;
-
+  const handleSubmit = async (formData: LocationFormData) => {
     try {
-      const selectedCity = cities.find(c => c.code === formData.cityCode);
-      const selectedCompany = companies.find(c => c.code === formData.managementCompanyCode);
-      
-      if (!selectedCity) {
-        throw new Error("City not found");
+      if (!formData) {
+        throw new Error('לא התקבלו נתונים');
       }
 
-      const workDays = formData.weekDays.map((dayName: string) => ({
-        dayName,
-        hours: formData.calculationType === CalculationType.HOURLY 
-          ? Number(formData.dayHours?.find((dh: { dayId: string; hours: number }) => dh.dayId === dayName)?.hours || 0)
-          : 0
-      }));
+      console.log('Form data received:', formData);
+      console.log('Selected location:', selectedLocation);
 
-      const locationData: CreateLocationDto = {
+      // מצא את החברה המנהלת לפי הקוד
+      const selectedCompany = companies.find(c => c.code === formData.managementCompanyCode);
+      const selectedCity = cities.find(c => c.code === formData.cityCode);
+
+      // המרת הנתונים מהטופס למבנה של Location
+      const baseLocationData = {
         street: formData.street,
         streetNumber: formData.streetNumber,
-        city: selectedCity.name,
-        cityCode: selectedCity.code,
+        cityCode: formData.cityCode,
+        city: selectedCity?.name || '',
+        calculationType: formData.calculationType,
         managementCompany: selectedCompany ? {
           code: selectedCompany.code,
           name: selectedCompany.name
         } : undefined,
-        calculationType: formData.calculationType as CalculationType,
-        workDays,
-        hourlyRate: formData.calculationType === CalculationType.HOURLY ? Number(formData.hourlyRate) : undefined,
-        globalAmount: formData.calculationType === CalculationType.GLOBAL ? Number(formData.globalAmount) : undefined
+        workDays: formData.dayHours.map(dh => ({
+          dayName: dh.dayId,
+          hours: dh.hours
+        }))
       };
 
-      await updateLocation(editingLocation.code, locationData);
-      await loadLocations();
-      setEditingLocation(null);
-      setIsAddFormOpen(false);
-      toast.success("✅ המיקום עודכן בהצלחה");
-    } catch (error) {
-      console.error("❌ Failed to update location:", error);
-      toast.error("❌ שגיאה בעדכון המיקום");
-    }
-  };
+      console.log('Base location data:', baseLocationData);
 
-  const handleAddLocation = async (formData: any) => {
-    try {
-      const selectedCity = cities.find(c => c.code === formData.cityCode);
-      const selectedCompany = companies.find(c => c.code === formData.managementCompanyCode);
-      
-      if (!selectedCity) {
-        throw new Error("City not found");
+      // יצירת אובייקט Location לפי סוג החישוב
+      let locationData: Partial<Location>;
+      switch (formData.calculationType) {
+        case CalculationType.HOURLY:
+          locationData = {
+            ...baseLocationData,
+            calculationType: CalculationType.HOURLY,
+            hourlyRate: parseFloat(formData.hourlyRate || '0')
+          } as Partial<HourlyLocation>;
+          break;
+        case CalculationType.GLOBAL:
+          locationData = {
+            ...baseLocationData,
+            calculationType: CalculationType.GLOBAL,
+            globalAmount: parseFloat(formData.globalAmount || '0')
+          } as Partial<GlobalLocation>;
+          break;
+        case CalculationType.DICTATED:
+          locationData = {
+            ...baseLocationData,
+            calculationType: CalculationType.DICTATED,
+            dictatedHours: parseFloat(formData.dictatedHours || '0')
+          } as Partial<DictatedLocation>;
+          break;
+        default:
+          throw new Error('סוג חישוב לא תקין');
       }
 
-      if (!formData.weekDays || !Array.isArray(formData.weekDays) || formData.weekDays.length === 0) {
-        toast.error("❌ יש לבחור לפחות יום אחד");
-        return;
-      }
+      console.log('Final location data:', locationData);
 
-      const workDays = formData.weekDays.map((dayName: string) => ({
-        dayName,
-        hours: formData.calculationType === CalculationType.HOURLY 
-          ? Number(formData.dayHours?.find((dh: { dayId: string; hours: number }) => dh.dayId === dayName)?.hours || 0)
-          : 0
-      }));
-
-      const locationData: CreateLocationDto = {
-        street: formData.street,
-        streetNumber: formData.streetNumber,
-        city: selectedCity.name,
-        cityCode: selectedCity.code,
-        managementCompany: selectedCompany ? {
-          code: selectedCompany.code,
-          name: selectedCompany.name
-        } : undefined,
-        calculationType: formData.calculationType as CalculationType,
-        workDays,
-        hourlyRate: formData.calculationType === CalculationType.HOURLY ? Number(formData.hourlyRate) : undefined,
-        globalAmount: formData.calculationType === CalculationType.GLOBAL ? Number(formData.globalAmount) : undefined
-      };
-
-      await createLocation(locationData);
-      await loadLocations();
-      setIsAddFormOpen(false);
-      toast.success("✅ המיקום נוסף בהצלחה");
-    } catch (error) {
-      console.error("❌ Failed to add location:", error);
-      toast.error("❌ שגיאה בהוספת המיקום");
-    }
-  };
-
-  const handleDelete = async (code: string) => {
-    if (confirm(`האם אתה בטוח שברצונך למחוק את המיקום עם קוד ${code}?`)) {
-      try {
-        const success = await deleteLocation(code);
-        if (success) {
-          await loadLocations();
-          toast.success("✅ המיקום נמחק בהצלחה");
-        } else {
-          toast.error("❌ המיקום לא נמצא");
+      if (selectedLocation?.id) {
+        // עדכון מיקום קיים
+        console.log('Updating existing location with ID:', selectedLocation.id);
+        console.log('Current location in state:', locations.find(loc => loc.id === selectedLocation.id));
+        
+        // שמירה על ה-ID והקוד המקוריים
+        const updatedLocation = {
+          ...locationData,
+          id: selectedLocation.id,
+          code: selectedLocation.code
+        };
+        
+        console.log('Update data with preserved ID and code:', updatedLocation);
+        
+        await updateLocation(selectedLocation.id, updatedLocation);
+        showSuccessToast('המיקום עודכן בהצלחה');
+        
+        // עדכון ה-state המקומי
+        setLocations(prevLocations => 
+          prevLocations.map(loc => 
+            loc.id === selectedLocation.id 
+              ? { ...loc, ...updatedLocation } as Location
+              : loc
+          )
+        );
+      } else {
+        // יצירת מיקום חדש
+        const newLocationCode = generateUniqueLocationCode(locations);
+        
+        // בדיקה שהקוד תקין
+        if (!/^\d{4}$/.test(newLocationCode)) {
+          throw new Error('נוצר קוד לא תקין');
         }
+
+        console.log('New location code generated:', newLocationCode);
+
+        const newLocation = {
+          ...locationData,
+          code: newLocationCode
+        } as Location;
+        
+        const createdLocation = await createLocation(newLocation);
+        showSuccessToast('המיקום נוצר בהצלחה');
+        
+        // עדכון ה-state המקומי
+        setLocations(prevLocations => [...prevLocations, createdLocation]);
+      }
+      
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      showErrorToast('שגיאה בשמירת המיקום');
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedLocation(null);
+    setIsModalOpen(false);
+  };
+
+  const handleDelete = async (locationId: string) => {
+    if (window.confirm('האם אתה בטוח שברצונך למחוק מיקום זה?')) {
+      try {
+        console.log('Starting deletion process for location:', locationId);
+        await deleteLocation(locationId);
+        console.log('Location deleted, showing success toast');
+        showSuccessToast('המיקום נמחק בהצלחה');
+        console.log('Updating local state...');
+        setLocations(prevLocations => prevLocations.filter(loc => loc.id !== locationId));
+        console.log('Local state updated successfully');
       } catch (error) {
-        console.error("❌ Failed to delete location:", error);
-        toast.error("❌ שגיאה במחיקת המיקום");
+        console.error('Error in handleDelete:', error);
+        showErrorToast('שגיאה במחיקת המיקום');
       }
     }
   };
@@ -241,133 +379,248 @@ export default function LocationsPage() {
     return city ? `${city.code} - ${city.name}` : cityCode;
   };
 
+  // פונקציית עזר להצגת הודעת שגיאה
+  const renderError = () => (
+    <div className={styles.error}>
+      <p>{error}</p>
+      <button onClick={() => window.location.reload()}>נסה שוב</button>
+    </div>
+  );
+
+  // פונקציית עזר להצגת אנימציית טעינה
+  const renderLoading = () => (
+    <div className={styles.loading}>
+      <p>טוען מיקומים...</p>
+    </div>
+  );
+
+  // פונקציית עזר להצגת הודעה כשאין מיקומים
+  const renderEmptyState = () => (
+    <div className={styles.emptyState}>
+      <p>לא נמצאו מיקומים</p>
+      <button onClick={() => setIsModalOpen(true)}>הוסף מיקום חדש</button>
+    </div>
+  );
+
+  // פונקציה לעיבוד נתוני המיקום לפני הצגתם
+  const processLocation = (location: Location): LocationRow => {
+    if (!location || !location.code) {
+      console.error('מיקום לא תקין:', location);
+      throw new Error('מיקום לא תקין');
+    }
+
+    return {
+      id: location.id || '',
+      code: location.code,
+      street: location.street,
+      streetNumber: location.streetNumber,
+      city: location.city,
+      cityCode: location.cityCode,
+      calculationType: location.calculationType,
+      workDays: location.workDays || [],
+      managementCompany: location.managementCompany,
+      hourlyRate: location.calculationType === CalculationType.HOURLY 
+        ? (location as HourlyLocation).hourlyRate 
+        : undefined,
+      globalAmount: location.calculationType === CalculationType.GLOBAL 
+        ? (location as GlobalLocation).globalAmount 
+        : undefined,
+      dictatedHours: location.calculationType === CalculationType.DICTATED 
+        ? (location as DictatedLocation).dictatedHours 
+        : undefined
+    };
+  };
+
+  // עדכון הרנדור של הטבלה
+  const renderLocationRow = (location: Location) => {
+    try {
+      const processedLocation = processLocation(location);
+      
+      if (!processedLocation || !processedLocation.workDays) {
+        console.error('קוד מיקום לא תקין:', location.code);
+        return null;
+      }
+
+      return (
+        <tr key={processedLocation.id || `location-${Math.random()}`}>
+          <td>{processedLocation.code}</td>
+          <td>{processedLocation.street} {processedLocation.streetNumber}</td>
+          <td>{processedLocation.city}</td>
+          <td>{processedLocation.managementCompany?.name || 'אין'}</td>
+          <td>{processedLocation.calculationType}</td>
+          <td>{processedLocation.workDays.map(day => daysMap[day.dayName]).join(', ')}</td>
+          <td>
+            <button 
+              onClick={() => handleEdit(location)}
+              className={styles.editButton}
+            >
+              ערוך
+            </button>
+            <button 
+              onClick={() => handleDelete(processedLocation.id)}
+              className={styles.deleteButton}
+            >
+              מחק
+            </button>
+          </td>
+        </tr>
+      );
+    } catch (error) {
+      console.error('שגיאה בעיבוד שורת מיקום:', error);
+      return null;
+    }
+  };
+
+  // הוספת פונקציית עזר לחישוב סה"כ שעות למיקום שעתי
+  const calculateTotalHours = (location: HourlyLocation): number => {
+    return location.workDays.reduce((total, day) => total + (day.hours || 0), 0);
+  };
+
+  // הוספת פונקציית עזר לחישוב סה"כ עלות למיקום שעתי
+  const calculateTotalCost = (location: HourlyLocation): number => {
+    return calculateTotalHours(location) * location.hourlyRate;
+  };
+
+  // עדכון הרנדור של פרטי החישוב
+  const renderCalculationDetails = (location: Location) => {
+    if (isHourlyLocation(location)) {
+      const totalHours = calculateTotalHours(location);
+      const totalCost = calculateTotalCost(location);
+
+      return (
+        <div className={styles.calculationDetails}>
+          <div className={styles.detailsGrid}>
+            <div className={styles.detailsColumn}>
+              <div className={styles.columnHeader}>יום</div>
+              {location.workDays.map(day => (
+                <div key={day.dayName} className={styles.detailRow}>
+                  {daysMap[day.dayName]}
+                </div>
+              ))}
+              <div className={styles.totalRow}>סה"כ</div>
+            </div>
+            <div className={styles.detailsColumn}>
+              <div className={styles.columnHeader}>שעות</div>
+              {location.workDays.map(day => (
+                <div key={day.dayName} className={styles.detailRow}>
+                  {day.hours || 0}
+                </div>
+              ))}
+              <div className={styles.totalRow}>{totalHours}</div>
+            </div>
+            <div className={styles.detailsColumn}>
+              <div className={styles.columnHeader}>תעריף לשעה</div>
+              <div className={styles.detailRow}>
+                {formatCurrency(location.hourlyRate)}
+              </div>
+              <div className={styles.totalRow}>{formatCurrency(totalCost)}</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isGlobalLocation(location)) {
+      return (
+        <div className={styles.calculationDetails}>
+          <div className={styles.detailsGrid}>
+            <div className={styles.detailsColumn}>
+              <div className={styles.columnHeader}>סכום גלובלי</div>
+              <div className={styles.detailRow}>
+                {formatCurrency(location.globalAmount)}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isDictatedLocation(location)) {
+      return (
+        <div className={styles.calculationDetails}>
+          <div className={styles.detailsGrid}>
+            <div className={styles.detailsColumn}>
+              <div className={styles.columnHeader}>שעות מוכתבות</div>
+              <div className={styles.detailRow}>
+                {location.dictatedHours} שעות
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // הוספת פונקציית getCalculationTypeDisplay
+  const getCalculationTypeDisplay = (location: LocationRow): string => {
+    switch (location.calculationType) {
+      case CalculationType.HOURLY:
+        return `שעתי - ${location.hourlyRate} ₪ לשעה`;
+      case CalculationType.GLOBAL:
+        return `גלובלי - ${location.globalAmount} ₪`;
+      case CalculationType.DICTATED:
+        return `מוכתב - ${location.dictatedHours} שעות`;
+      default:
+        return 'לא ידוע';
+    }
+  };
+
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>
-          ניהול מיקומים
-        </h1>
-        <button onClick={() => setIsAddFormOpen(true)} className={styles.addButton}>
+      <div className={styles.header}>
+        <h1>ניהול מיקומים</h1>
+        <button
+          className={styles.addButton}
+          onClick={() => setIsModalOpen(true)}
+          disabled={isLoading}
+        >
           הוסף מיקום חדש
         </button>
-      </header>
+      </div>
 
-      <div className={styles.tableContainer}>
-        <div className={styles.tableTitle}>
-          <h2>טבלת מיקומים (locationsDataTable)</h2>
-        </div>
-        <div className={styles.tableWrapper}>
-          <table className={styles.dataTable} data-variable-name="locationsDataTable">
+      {error && renderError()}
+      {isLoading ? (
+        renderLoading()
+      ) : locations.length === 0 ? (
+        renderEmptyState()
+      ) : (
+        <div className={styles.tableContainer}>
+          <div className={styles.tableHeader}>
+            <h2>טבלת ניהול מיקומים (locationsManagementTable)</h2>
+          </div>
+          <table className={styles.table}>
             <thead>
               <tr>
-                <th>קוד מיקום (locationCode)</th>
-                <th>רחוב (locationStreet)</th>
-                <th>מספר רחוב (streetNumber)</th>
-                <th>עיר (cityName)</th>
-                <th>ימי עבודה (workDays)</th>
-                <th>סוג חישוב (calculationType)</th>
-                <th>פרטי חישוב (paymentDetails)</th>
+                <th>קוד (locationCode)</th>
+                <th>כתובת (locationAddress)</th>
+                <th>עיר (locationCity)</th>
                 <th>חברת ניהול (managementCompany)</th>
-                <th>פעולות</th>
+                <th>סוג חישוב (calculationType)</th>
+                <th>ימי עבודה (workDays)</th>
+                <th>פעולות (actions)</th>
               </tr>
             </thead>
             <tbody>
-              {locations.map((loc) => (
-                <tr key={loc.code}>
-                  <td>{loc.code}</td>
-                  <td>{loc.street}</td>
-                  <td>{loc.streetNumber}</td>
-                  <td>{getCityFullName(loc.cityCode)}</td>
-                  <td dir="rtl" className={styles.workdaysCell}>
-                    {loc.workDays.map(day => daysMap[day.dayName]).join(', ')}
-                  </td>
-                  <td>
-                    {loc.calculationType === CalculationType.HOURLY ? 'חישוב שעתי' :
-                     loc.calculationType === CalculationType.GLOBAL ? 'חישוב גלובלי' : 'חישוב מוכתב'}
-                  </td>
-                  <td className={styles.calculationDetailsCell}>
-                    {loc.calculationType === CalculationType.HOURLY ? (
-                      <div className={styles.calculationDetails}>
-                        <div className={styles.detailsGrid}>
-                          <div className={styles.detailsColumn}>
-                            <div className={styles.columnHeader}>יום (dayNameColumn)</div>
-                            {loc.workDays.map(day => (
-                              <div key={day.dayName} className={styles.detailRow}>
-                                {daysMap[day.dayName]}
-                              </div>
-                            ))}
-                          </div>
-                          <div className={styles.detailsColumn}>
-                            <div className={styles.columnHeader}>שעות (dayHoursColumn)</div>
-                            {loc.workDays.map(day => (
-                              <div key={day.dayName} className={styles.detailRow}>
-                                {day.hours}
-                              </div>
-                            ))}
-                          </div>
-                          <div className={styles.detailsColumn}>
-                            <div className={styles.columnHeader}>תעריף לשעה (hourlyRateInput)</div>
-                            <div className={styles.detailRow}>
-                              {formatCurrency(loc.hourlyRate || 0)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : loc.calculationType === CalculationType.GLOBAL ? (
-                      <div className={styles.calculationDetails}>
-                        <div className={styles.detailsGrid}>
-                          <div className={styles.detailsColumn}>
-                            <div className={styles.columnHeader}>סכום גלובלי (globalAmountInput)</div>
-                            <div className={styles.detailRow}>
-                              {formatCurrency(loc.globalAmount || 0)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </td>
-                  <td>{loc.managementCompany ? `${loc.managementCompany.name} (${loc.managementCompany.code})` : '-'}</td>
-                  <td>
-                    <div className={styles.actionsGroup}>
-                      <button onClick={() => handleEdit(loc)} className={styles.editButton}>
-                        ערוך
-                      </button>
-                      <button onClick={() => handleDelete(loc.code)} className={styles.deleteButton}>
-                        מחק
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {locations.length === 0 && (
-                <tr>
-                  <td colSpan={8} className={styles.emptyState}>
-                    לא נמצאו מיקומים
-                  </td>
-                </tr>
-              )}
+              {locations.map(location => renderLocationRow(location))}
             </tbody>
           </table>
         </div>
-      </div>
+      )}
 
-      {isAddFormOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
-            <AddLocationForm
-              isOpen={isAddFormOpen}
-              cities={cities}
-              companies={companies}
-              onSubmit={handleSubmit}
-              onClose={() => {
-                setIsAddFormOpen(false);
-                setEditingLocation(null);
-              }}
-              initialData={editingLocation}
-            />
-          </div>
-        </div>
+      {isModalOpen && (
+        <AddLocationForm
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          onSubmit={handleSubmit}
+          initialData={selectedLocation}
+          cities={cities}
+          companies={companies}
+        />
       )}
     </div>
   );
-}
+};
+
+export default LocationsPage;

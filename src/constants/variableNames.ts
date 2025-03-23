@@ -49,6 +49,22 @@ export const CITIES_TABLE_VARIABLES = {
   ACTIONS: 'cityActionsColumn'
 } as const;
 
+// שמות משתנים עבור טבלת ניהול הכנסות
+export const INCOME_TABLE_VARIABLES = {
+  TABLE: 'monthlyIncomeManagementTable',
+  MANAGEMENT_COMPANY: 'managementCompanyColumn',
+  LOCATION_ADDRESS: 'locationAddressColumn',
+  WORK_DAYS: 'workDaysColumn',
+  PAYMENT_DETAILS: 'paymentDetailsColumn',
+  COLLECTION_AMOUNT: 'collectionAmountColumn',
+  ACTIONS: 'actionsColumn',
+  SUMMARY_ROW: 'summaryRow',
+  TOTAL_HOURS: 'totalHoursCell',
+  CALCULATION_SUMMARY: 'calculationSummaryCell',
+  TOTAL_AMOUNT: 'totalAmountCell',
+  TOTAL_LOCATIONS: 'totalLocationsCell'
+} as const;
+
 // שמות משתנים עבור טופס הוספת/עריכת עיר
 export const CITY_FORM_VARIABLES = {
   FORM_CONTAINER: 'addCityFormContainer',
@@ -65,5 +81,6 @@ export const ALL_VARIABLE_NAMES = [
   ...Object.values(WORKDAYS_TABLE_VARIABLES),
   ...Object.values(FORM_VARIABLES),
   ...Object.values(CITIES_TABLE_VARIABLES),
+  ...Object.values(INCOME_TABLE_VARIABLES),
   ...Object.values(CITY_FORM_VARIABLES)
 ] as const; 

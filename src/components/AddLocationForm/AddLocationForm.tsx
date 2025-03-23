@@ -1,122 +1,288 @@
 import React, { useState, useEffect } from 'react';
-import { CalculationType, Location } from '../../types/location.types';
-import './AddLocationForm.css';
+import { 
+  CalculationType, 
+  Location, 
+  LocationFormData,
+  DayName,
+  HourlyLocation,
+  GlobalLocation,
+  DictatedLocation,
+  WorkDay
+} from '../../types/location.types';
 import { City } from '../../services/CitiesService';
-import { Company } from '../../types/models';
+import { Company } from '../../types/company.types';
+import styles from './AddLocationForm.module.css';  // שינוי לשימוש ב-CSS Modules
+
+// העברת הסטיילינג לקובץ CSS Modules נפרד
+// AddLocationForm.module.css
 
 interface AddLocationFormProps {
   isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: any) => void;
   cities: City[];
   companies: Company[];
+  onSubmit: (data: LocationFormData) => Promise<void>;
+  onClose: () => void;
   initialData?: Location | null;
 }
 
-// ימי השבוע
-const DAYS = [
-  { id: 'SUNDAY', label: 'ראשון' },
-  { id: 'MONDAY', label: 'שני' },
-  { id: 'TUESDAY', label: 'שלישי' },
-  { id: 'WEDNESDAY', label: 'רביעי' },
-  { id: 'THURSDAY', label: 'חמישי' },
-  { id: 'FRIDAY', label: 'שישי' },
-  { id: 'SATURDAY', label: 'שבת' }
+// עדכון הימים להשתמש ב-DayName
+const DAYS: Array<{ id: DayName; label: string }> = [
+  { id: DayName.SUNDAY, label: 'ראשון' },
+  { id: DayName.MONDAY, label: 'שני' },
+  { id: DayName.TUESDAY, label: 'שלישי' },
+  { id: DayName.WEDNESDAY, label: 'רביעי' },
+  { id: DayName.THURSDAY, label: 'חמישי' },
+  { id: DayName.FRIDAY, label: 'שישי' },
+  { id: DayName.SATURDAY, label: 'שבת' }
 ];
 
-export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, companies, initialData }: AddLocationFormProps) {
-  // מצב התחלתי של הטופס
-  const [formData, setFormData] = useState({
-    street: '',
-    streetNumber: '',
-    cityCode: '',
-    managementCompanyCode: '',
-    calculationType: CalculationType.HOURLY as CalculationType,
-    weekDays: [] as string[],
-    dayHours: [] as { dayId: string; hours: number }[],
-    hourlyRate: '',
-    globalAmount: ''
-  });
+const DEFAULT_FORM_DATA: LocationFormData = {
+  street: '',
+  streetNumber: '',
+  cityCode: '',
+  managementCompanyCode: '',
+  calculationType: CalculationType.HOURLY,
+  weekDays: [],
+  dayHours: [],
+  hourlyRate: '',
+  globalAmount: '',
+  dictatedHours: ''
+};
 
-  // טעינת נתונים קיימים כשהטופס נפתח במצב עריכה
+// הוספת טיפוס לשגיאות
+type FormErrors = Partial<Record<keyof LocationFormData | 'submit', string>>;
+
+// קבועים עם טיפוסים מפורשים
+const HOURS_CONSTRAINTS = {
+  MIN: 0,
+  MAX: 24,
+  STEP: 0.5
+} as const;
+
+const WEEKLY_HOURS_CONSTRAINTS = {
+  MIN: 1,
+  MAX: 168,
+  STEP: 0.5
+} as const;
+
+const CURRENCY_CONSTRAINTS = {
+  MIN: 0,
+  STEP: 0.1
+} as const;
+
+interface NumericFieldConfig {
+  min: number;
+  max?: number;
+  step: number;
+  validator: (value: number) => boolean;
+}
+
+const numericFieldsConfig: Record<string, NumericFieldConfig> = {
+  hourlyRate: {
+    min: CURRENCY_CONSTRAINTS.MIN,
+    step: CURRENCY_CONSTRAINTS.STEP,
+    validator: (value) => value >= CURRENCY_CONSTRAINTS.MIN && Number.isFinite(value)
+  },
+  globalAmount: {
+    min: CURRENCY_CONSTRAINTS.MIN,
+    step: CURRENCY_CONSTRAINTS.STEP,
+    validator: (value) => value >= CURRENCY_CONSTRAINTS.MIN && Number.isFinite(value)
+  },
+  dictatedHours: {
+    min: WEEKLY_HOURS_CONSTRAINTS.MIN,
+    max: WEEKLY_HOURS_CONSTRAINTS.MAX,
+    step: WEEKLY_HOURS_CONSTRAINTS.STEP,
+    validator: (value) => 
+      value >= WEEKLY_HOURS_CONSTRAINTS.MIN && 
+      value <= WEEKLY_HOURS_CONSTRAINTS.MAX && 
+      Number.isFinite(value)
+  }
+};
+
+export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, companies, initialData }: AddLocationFormProps) {
+  const [formData, setFormData] = useState<LocationFormData>(() => ({
+    street: initialData?.street || '',
+    streetNumber: initialData?.streetNumber || '',
+    cityCode: initialData?.cityCode || '',
+    managementCompanyCode: initialData?.managementCompany?.code || '',
+    calculationType: initialData?.calculationType || CalculationType.HOURLY,
+    weekDays: initialData?.workDays?.map(d => d.dayName) || [],
+    dayHours: initialData?.workDays?.map(d => ({
+      dayId: d.dayName,
+      hours: d.hours || 0
+    })) || [],
+    hourlyRate: '',
+    globalAmount: '',
+    dictatedHours: ''
+  }));
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (initialData) {
-      setFormData({
-        street: initialData.street || '',
-        streetNumber: initialData.streetNumber || '',
-        cityCode: initialData.cityCode || '',
+      const newFormData: LocationFormData = {
+        ...DEFAULT_FORM_DATA,
+        street: initialData.street,
+        streetNumber: initialData.streetNumber,
+        cityCode: initialData.cityCode,
         managementCompanyCode: initialData.managementCompany?.code || '',
-        calculationType: initialData.calculationType || CalculationType.HOURLY,
-        weekDays: initialData.workDays?.map(wd => wd.dayName) || [],
-        dayHours: initialData.workDays?.map(wd => ({
-          dayId: wd.dayName,
-          hours: wd.hours || 0
-        })) || [],
-        hourlyRate: initialData.calculationType === CalculationType.HOURLY ? 
-          (initialData as any).hourlyRate?.toString() || '' : '',
-        globalAmount: initialData.calculationType === CalculationType.GLOBAL ? 
-          (initialData as any).globalAmount?.toString() || '' : ''
-      });
+        calculationType: initialData.calculationType,
+        weekDays: initialData.workDays.map(wd => wd.dayName),
+        dayHours: initialData.workDays
+          .filter((wd): wd is Required<WorkDay> => wd.hours !== undefined)
+          .map(wd => ({
+            dayId: wd.dayName,
+            hours: wd.hours
+          }))
+      };
+
+      switch (initialData.calculationType) {
+        case CalculationType.HOURLY:
+          newFormData.hourlyRate = (initialData as HourlyLocation).hourlyRate.toString();
+          break;
+        case CalculationType.GLOBAL:
+          newFormData.globalAmount = (initialData as GlobalLocation).globalAmount.toString();
+          break;
+        case CalculationType.DICTATED:
+          newFormData.dictatedHours = (initialData as DictatedLocation).dictatedHours.toString();
+          break;
+      }
+
+      setFormData(newFormData);
+      setErrors({});
     } else {
       resetForm();
     }
   }, [initialData]);
 
-  // איפוס הטופס
+  useEffect(() => {
+    // בדיקת תקינות החברות בעת טעינת הקומפוננטה
+    if (companies.length > 0) {
+      const invalidCompanies = companies.filter(c => !c.code || !c.name);
+      if (invalidCompanies.length > 0) {
+        console.error('נמצאו חברות לא תקינות:', invalidCompanies);
+      }
+    }
+  }, [companies]);
+
   const resetForm = () => {
-    setFormData({
-      street: '',
-      streetNumber: '',
-      cityCode: '',
-      managementCompanyCode: '',
-      calculationType: CalculationType.HOURLY,
-      weekDays: [],
-      dayHours: [],
-      hourlyRate: '',
-      globalAmount: ''
-    });
+    setFormData(DEFAULT_FORM_DATA);
+    setErrors({});
   };
 
-  // שליחת הטופס
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    // ולידציה בסיסית
+    if (!formData.street.trim()) {
+      newErrors.street = 'יש להזין רחוב';
+    }
+    if (!formData.streetNumber.trim()) {
+      newErrors.streetNumber = 'יש להזין מספר רחוב';
+    }
+    if (!formData.cityCode) {
+      newErrors.cityCode = 'יש לבחור עיר';
+    }
+    if (formData.weekDays.length === 0) {
+      newErrors.weekDays = 'יש לבחור לפחות יום אחד';
+    }
+
+    // ולידציה לפי סוג החישוב
+    switch (formData.calculationType) {
+      case CalculationType.HOURLY: {
+        const hourlyRate = Number(formData.hourlyRate);
+        if (!numericFieldsConfig.hourlyRate.validator(hourlyRate)) {
+          newErrors.hourlyRate = 'יש להזין תעריף שעתי חוקי';
+        }
+        
+        const hasInvalidHours = formData.dayHours.some(
+          dh => !validateHours(dh.hours)
+        );
+        if (hasInvalidHours) {
+          newErrors.dayHours = `יש להזין מספר שעות תקין (${HOURS_CONSTRAINTS.MIN}-${HOURS_CONSTRAINTS.MAX}) לכל יום עבודה`;
+        }
+        break;
+      }
+      case CalculationType.GLOBAL: {
+        const globalAmount = Number(formData.globalAmount);
+        if (!numericFieldsConfig.globalAmount.validator(globalAmount)) {
+          newErrors.globalAmount = 'יש להזין סכום גלובלי חוקי';
+        }
+        break;
+      }
+      case CalculationType.DICTATED: {
+        const dictatedHours = Number(formData.dictatedHours);
+        if (!numericFieldsConfig.dictatedHours.validator(dictatedHours)) {
+          newErrors.dictatedHours = `יש להזין מספר שעות חוקי (${WEEKLY_HOURS_CONSTRAINTS.MIN}-${WEEKLY_HOURS_CONSTRAINTS.MAX})`;
+        }
+        break;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // בדיקה שנבחר לפחות יום אחד
-    if (formData.weekDays.length === 0) {
-      alert('יש לבחור לפחות יום אחד');
+    if (isSubmitting || !validateForm()) {
       return;
     }
 
-    onSubmit(formData);
-    resetForm();
+    try {
+      setIsSubmitting(true);
+      await onSubmit(formData);
+      resetForm();
+      onClose();
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        submit: error instanceof Error ? error.message : 'שגיאה בשמירת הנתונים'
+      }));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // עדכון שעות ליום ספציפי
-  const handleHoursChange = (dayId: string, hours: number) => {
+  // עדכון הטיפול בשעות ליום ספציפי
+  const handleHoursChange = (dayId: DayName, value: string) => {
+    const hours = Number(value);
+    
+    if (isNaN(hours) || hours < HOURS_CONSTRAINTS.MIN || hours > HOURS_CONSTRAINTS.MAX) {
+      setErrors(prev => ({
+        ...prev,
+        dayHours: `מספר השעות חייב להיות בין ${HOURS_CONSTRAINTS.MIN} ל-${HOURS_CONSTRAINTS.MAX}`
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       dayHours: [
-        ...prev.dayHours.filter(dh => dh.dayId !== dayId),
+        ...(prev.dayHours?.filter(dh => dh.dayId !== dayId) || []),
         { dayId, hours }
-      ].sort((a, b) => {
-        const dayOrder = DAYS.findIndex(d => d.id === a.dayId) - DAYS.findIndex(d => d.id === b.dayId);
-        return dayOrder;
-      })
+      ].sort((a, b) => DAYS.findIndex(d => d.id === a.dayId) - DAYS.findIndex(d => d.id === b.dayId))
     }));
+
+    // ניקוי שגיאה אם קיימת
+    setErrors(prev => {
+      const { dayHours, ...rest } = prev;
+      return rest;
+    });
   };
 
-  // טיפול בבחירת יום
-  const handleDayToggle = (dayId: string) => {
+  // עדכון הטיפול בבחירת יום
+  const handleDayToggle = (dayId: DayName) => {
     setFormData(prev => {
       const isSelected = prev.weekDays.includes(dayId);
       
-      let newDayHours = prev.dayHours;
+      let newDayHours = prev.dayHours || [];
       if (!isSelected) {
-        // כשמוסיפים יום, מוסיפים גם את השעות שלו (אם זה חישוב שעתי)
         if (prev.calculationType === CalculationType.HOURLY) {
-          const existingHours = prev.dayHours.find(dh => dh.dayId === dayId)?.hours || 0;
+          const existingHours = prev.dayHours?.find(dh => dh.dayId === dayId)?.hours || 0;
           newDayHours = [
-            ...prev.dayHours,
+            ...newDayHours,
             { dayId, hours: existingHours }
           ].sort((a, b) => {
             const dayOrder = DAYS.findIndex(d => d.id === a.dayId) - DAYS.findIndex(d => d.id === b.dayId);
@@ -124,8 +290,7 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
           });
         }
       } else {
-        // כשמסירים יום, מסירים גם את השעות שלו
-        newDayHours = prev.dayHours.filter(dh => dh.dayId !== dayId);
+        newDayHours = newDayHours.filter(dh => dh.dayId !== dayId);
       }
       
       return {
@@ -141,47 +306,88 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
     });
   };
 
-  // טיפול בשינוי של שדה כלשהו
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  // עדכון פונקציית handleInputChange להיות יותר ספציפית
+  const handleNumericInput = (name: string, value: string) => {
+    const numValue = value === '' ? null : Number(value);
+    
+    if (numValue === null) {
+      setFormData(prev => ({ ...prev, [name]: '' }));
+      return;
+    }
+
+    if (isNaN(numValue)) {
+      return;
+    }
+
+    const config = numericFieldsConfig[name];
+    if (!config || !config.validator(numValue)) {
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'managementCompanyCode') {
+      console.log('Selected management company code:', value);
+      // בדיקה שהחברה שנבחרה קיימת
+      const selectedCompany = companies.find(c => c.code === value);
+      if (value && !selectedCompany) {
+        console.error('נבחרה חברה לא קיימת:', value);
+        return;
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // הוספת פונקציית עזר לבדיקת תקינות שעות
+  const validateHours = (hours: number): boolean => {
+    return Number.isFinite(hours) && 
+           hours >= HOURS_CONSTRAINTS.MIN && 
+           hours <= HOURS_CONSTRAINTS.MAX;
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <h2 className="modal-title">
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContent}>
+        <h2 className={styles.modalTitle}>
           {initialData ? 'עריכת מיקום' : 'הוספת מיקום חדש'}
         </h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>
-              בחר חברת ניהול
-            </label>
+          <div className={`${styles.formGroup} ${errors.managementCompanyCode ? styles.hasError : ''}`}>
+            <label htmlFor="managementCompany">חברת ניהול (managementCompany)</label>
             <select
+              id="managementCompany"
               name="managementCompanyCode"
               value={formData.managementCompanyCode}
               onChange={handleInputChange}
-              required
+              className={styles.select}
             >
-              <option value="">בחר חברת ניהול</option>
+              <option key="empty" value="">בחר חברת ניהול</option>
               {companies.map(company => (
                 <option key={company.code} value={company.code}>
                   {company.name} ({company.code})
                 </option>
               ))}
             </select>
+            {errors.managementCompanyCode && (
+              <div className={styles.error}>{errors.managementCompanyCode}</div>
+            )}
           </div>
 
-          <div className="form-group">
-            <label>
-              רחוב
-            </label>
+          <div className={`${styles.formGroup} ${errors.street ? styles.hasError : ''}`}>
+            <label>רחוב</label>
             <input
               type="text"
               name="street"
@@ -189,12 +395,13 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
               onChange={handleInputChange}
               required
             />
+            {errors.street && (
+              <div className={styles.error}>{errors.street}</div>
+            )}
           </div>
 
-          <div className="form-group">
-            <label>
-              מספר
-            </label>
+          <div className={`${styles.formGroup} ${errors.streetNumber ? styles.hasError : ''}`}>
+            <label>מספר</label>
             <input
               type="text"
               name="streetNumber"
@@ -202,12 +409,13 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
               onChange={handleInputChange}
               required
             />
+            {errors.streetNumber && (
+              <div className={styles.error}>{errors.streetNumber}</div>
+            )}
           </div>
 
-          <div className="form-group">
-            <label>
-              עיר
-            </label>
+          <div className={`${styles.formGroup} ${errors.cityCode ? styles.hasError : ''}`}>
+            <label>עיר</label>
             <select
               name="cityCode"
               value={formData.cityCode}
@@ -221,12 +429,13 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
                 </option>
               ))}
             </select>
+            {errors.cityCode && (
+              <div className={styles.error}>{errors.cityCode}</div>
+            )}
           </div>
 
-          <div className="form-group">
-            <label>
-              סוג חישוב
-            </label>
+          <div className={`${styles.formGroup} ${errors.calculationType ? styles.hasError : ''}`}>
+            <label>סוג חישוב</label>
             <select
               name="calculationType"
               value={formData.calculationType}
@@ -235,14 +444,16 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
             >
               <option value={CalculationType.HOURLY}>חישוב שעתי</option>
               <option value={CalculationType.GLOBAL}>חישוב גלובלי</option>
+              <option value={CalculationType.DICTATED}>חישוב מוכתב</option>
             </select>
+            {errors.calculationType && (
+              <div className={styles.error}>{errors.calculationType}</div>
+            )}
           </div>
 
-          <div className="form-group">
-            <label>
-              ימי עבודה
-            </label>
-            <div className="days-table">
+          <div className={`${styles.formGroup} ${errors.weekDays ? styles.hasError : ''}`}>
+            <label>ימי עבודה</label>
+            <div className={styles.daysTable}>
               <table>
                 <thead>
                   <tr>
@@ -270,9 +481,10 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
                             <input
                               type="number"
                               min="0"
+                              max="24"
                               step="0.5"
-                              value={formData.dayHours.find(dh => dh.dayId === day.id)?.hours || ''}
-                              onChange={e => handleHoursChange(day.id, Number(e.target.value))}
+                              value={formData.dayHours?.find(dh => dh.dayId === day.id)?.hours || ''}
+                              onChange={e => handleHoursChange(day.id, e.target.value)}
                               required
                             />
                           )}
@@ -283,251 +495,96 @@ export default function AddLocationForm({ isOpen, onClose, onSubmit, cities, com
                 </tbody>
               </table>
             </div>
+            {errors.weekDays && (
+              <div className={styles.error}>{errors.weekDays}</div>
+            )}
           </div>
 
           {formData.calculationType === CalculationType.HOURLY && (
-            <div className="form-group">
-              <label>
-                תעריף לשעה
-              </label>
+            <div className={`${styles.formGroup} ${errors.hourlyRate ? styles.hasError : ''}`}>
+              <label>תעריף לשעה</label>
               <input
                 type="number"
                 name="hourlyRate"
                 value={formData.hourlyRate}
                 onChange={handleInputChange}
+                min={CURRENCY_CONSTRAINTS.MIN}
+                step={CURRENCY_CONSTRAINTS.STEP}
                 required
               />
+              {errors.hourlyRate && (
+                <div className={styles.error}>{errors.hourlyRate}</div>
+              )}
             </div>
           )}
 
           {formData.calculationType === CalculationType.GLOBAL && (
-            <div className="form-group">
-              <label>
-                סכום גלובלי
-              </label>
+            <div className={`${styles.formGroup} ${errors.globalAmount ? styles.hasError : ''}`}>
+              <label>סכום גלובלי</label>
               <input
                 type="number"
                 name="globalAmount"
                 value={formData.globalAmount}
                 onChange={handleInputChange}
+                min={CURRENCY_CONSTRAINTS.MIN}
+                step={CURRENCY_CONSTRAINTS.STEP}
                 required
               />
+              {errors.globalAmount && (
+                <div className={styles.error}>{errors.globalAmount}</div>
+              )}
             </div>
           )}
 
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="submit-button"
+          {formData.calculationType === CalculationType.DICTATED && (
+            <div className={`${styles.formGroup} ${errors.dictatedHours ? styles.hasError : ''}`}>
+              <label>מספר שעות מוכתב</label>
+              <input
+                type="number"
+                name="dictatedHours"
+                value={formData.dictatedHours}
+                onChange={handleInputChange}
+                min={WEEKLY_HOURS_CONSTRAINTS.MIN}
+                max={WEEKLY_HOURS_CONSTRAINTS.MAX}
+                step={WEEKLY_HOURS_CONSTRAINTS.STEP}
+                required
+              />
+              {errors.dictatedHours && (
+                <div className={styles.error}>{errors.dictatedHours}</div>
+              )}
+            </div>
+          )}
+
+          {errors.submit && (
+            <div className={`${styles.formGroup} ${styles.hasError}`}>
+              <div className={styles.error}>{errors.submit}</div>
+            </div>
+          )}
+
+          <div className={styles.formActions}>
+            <button 
+              type="submit" 
+              className={styles.submitButton}
+              disabled={isSubmitting}
             >
-              {initialData ? 'עדכן' : 'הוסף'}
+              {isSubmitting ? 'שומר...' : (initialData ? 'עדכן' : 'הוסף')}
             </button>
             <button
               type="button"
               onClick={() => {
-                resetForm();
-                onClose();
+                if (!isSubmitting) {
+                  resetForm();
+                  onClose();
+                }
               }}
-              className="cancel-button"
+              className={styles.cancelButton}
+              disabled={isSubmitting}
             >
               ביטול
             </button>
           </div>
         </form>
       </div>
-
-      <style>{`
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        }
-
-        .modal-content {
-          background: white;
-          padding: 2.5rem;
-          border-radius: 16px;
-          width: 95%;
-          max-width: 800px;
-          max-height: 85vh;
-          overflow-y: auto;
-          direction: rtl;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-          position: relative;
-          z-index: 1001;
-        }
-
-        .modal-title {
-          text-align: center;
-          margin-bottom: 2rem;
-          color: #2d1f5b;
-          font-size: 1.5rem;
-          font-weight: 600;
-          border-bottom: 2px solid #f0f0f0;
-          padding-bottom: 1rem;
-        }
-
-        .form-group {
-          margin-bottom: 1.25rem;
-          background: #f8f9fa;
-          padding: 1rem;
-          border-radius: 8px;
-        }
-
-        .form-group label {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          margin-bottom: 0.5rem;
-        }
-
-        .form-group input,
-        .form-group select {
-          width: 100%;
-          padding: 0.75rem;
-          border: 1px solid #e0e0e0;
-          border-radius: 8px;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-          background: white;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-          outline: none;
-          border-color: #6c63ff;
-          box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
-        }
-
-        .days-table {
-          margin: 1.5rem 0;
-          background: white;
-          border-radius: 8px;
-          overflow-x: auto;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .days-table table {
-          width: 100%;
-          min-width: 600px;
-          border-collapse: collapse;
-        }
-
-        .days-table th,
-        .days-table td {
-          padding: 0.75rem;
-          text-align: center;
-          border: 1px solid #f0f0f0;
-        }
-
-        .days-table th {
-          background: #f3f0ff;
-          color: #2d1f5b;
-          font-weight: 600;
-          font-size: 0.9rem;
-        }
-
-        .days-table tr:nth-child(even) {
-          background: #fafafa;
-        }
-
-        .days-table tr:hover {
-          background: #f5f5f5;
-        }
-
-        .days-table input[type="checkbox"] {
-          width: 18px;
-          height: 18px;
-          cursor: pointer;
-        }
-
-        .days-table input[type="number"] {
-          width: 70px;
-          padding: 0.4rem;
-          border: 1px solid #e0e0e0;
-          border-radius: 4px;
-          text-align: center;
-          font-size: 0.9rem;
-        }
-
-        .days-table input[type="number"]:focus {
-          outline: none;
-          border-color: #6c63ff;
-          box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.1);
-        }
-
-        .form-actions {
-          display: flex;
-          gap: 1rem;
-          justify-content: center;
-          margin-top: 2rem;
-          padding-top: 1.5rem;
-          border-top: 2px solid #f0f0f0;
-        }
-
-        .submit-button,
-        .cancel-button {
-          padding: 0.75rem 2rem;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-          min-width: 120px;
-        }
-
-        .submit-button {
-          background: linear-gradient(135deg, #6c63ff 0%, #5a52d5 100%);
-          color: white;
-        }
-
-        .submit-button:hover {
-          background: linear-gradient(135deg, #5a52d5 0%, #4a43c5 100%);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(108, 99, 255, 0.2);
-        }
-
-        .cancel-button {
-          background: #f3f0ff;
-          color: #6c63ff;
-        }
-
-        .cancel-button:hover {
-          background: #e5e0ff;
-          color: #5a52d5;
-        }
-
-        @media (max-width: 600px) {
-          .modal-content {
-            padding: 1.5rem;
-            width: 100%;
-            height: 100%;
-            max-height: 100vh;
-            border-radius: 0;
-          }
-
-          .form-group {
-            padding: 0.75rem;
-          }
-
-          .submit-button,
-          .cancel-button {
-            width: 100%;
-          }
-
-          .form-actions {
-            flex-direction: column;
-          }
-        }
-      `}</style>
     </div>
   );
 } 

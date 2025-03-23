@@ -39,9 +39,9 @@ const LocationManagement: React.FC = () => {
     loadLocations();
   }, []);
 
-  const loadLocations = () => {
+  const loadLocations = async () => {
     try {
-      const data = getAllLocations();
+      const data = await getAllLocations();
       console.log("נטענו מיקומים:", data);
       setLocations(data);
     } catch (error) {

@@ -28,8 +28,10 @@ export default function EmployeesPage() {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const emps = getAllEmployees();
-        const locs = getAllLocations();
+        const [emps, locs] = await Promise.all([
+          getAllEmployees(),
+          getAllLocations()
+        ]);
         console.log("📊 Loaded employees:", emps);
         console.log("📍 Loaded locations:", locs);
         setEmployees(emps);

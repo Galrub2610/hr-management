@@ -8,21 +8,6 @@ export enum CalculationType {
 }
 
 /**
- * ימי העבודה בשבוע
- */
-export enum WeekDays {
-  SUNDAY = 'ראשון',
-  MONDAY = 'שני',
-  TUESDAY = 'שלישי',
-  WEDNESDAY = 'רביעי',
-  THURSDAY = 'חמישי',
-  FRIDAY = 'שישי',
-  SATURDAY = 'שבת'
-}
-
-export type DayName = 'SUNDAY' | 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY';
-
-/**
  * מידע על יום עבודה ספציפי - משמש לחישוב שעתי
  * @property day - יום בשבוע
  * @property hours - מספר שעות עבודה
@@ -45,18 +30,15 @@ export interface ManagementCompany {
  * מידע בסיסי על מיקום - משותף לכל סוגי המיקומים
  */
 export interface BaseLocation {
-  id: string;                  // מזהה ייחודי
-  code: string;                // קוד
-  city: string;                // עיר
-  street: string;              // רחוב
-  streetNumber: string;        // מספר בית
+  id?: string;
+  code: string;
+  street: string;
+  streetNumber: string;
+  city: string;
   cityCode: string;
-  calculationType: CalculationType;  // סוג החישוב
-  createdAt: Date;            // תאריך יצירה
-  updatedAt: Date;            // תאריך עדכון אחרון
-  createdBy: string;
+  calculationType: CalculationType;
   workDays: WorkDay[];
-  managementCompany?: ManagementCompany; // חברת ניהול (אופציונלי)
+  managementCompany?: ManagementCompany;
 }
 
 /**
@@ -83,7 +65,7 @@ export interface GlobalLocation extends BaseLocation {
  */
 export interface DictatedLocation extends BaseLocation {
   calculationType: CalculationType.DICTATED;
-  dictatedHours: number;       // מספר שעות קבוע (יכול לכלול שבר עשרוני)
+  dictatedHours: number;
 }
 
 /**
@@ -122,15 +104,40 @@ export interface LocationFormState {
 /**
  * נתונים נדרשים ליצירת מיקום חדש
  */
-export interface CreateLocationDto {
-  street: string;
-  streetNumber: string;
-  city: string;
-  cityCode: string;
-  calculationType: CalculationType;
-  workDays: WorkDay[];
+export interface CreateLocationDto extends Omit<BaseLocation, 'code' | 'id'> {
   hourlyRate?: number;
   globalAmount?: number;
   dictatedHours?: number;
-  managementCompany?: ManagementCompany; // חברת ניהול (אופציונלי)
+}
+
+// הוספת טיפוסים לטופס
+export interface LocationFormData {
+  street: string;
+  streetNumber: string;
+  cityCode: string;
+  managementCompanyCode?: string;
+  calculationType: CalculationType;
+  weekDays: DayName[];
+  dayHours: {
+    dayId: DayName;
+    hours: number;
+  }[];
+  hourlyRate?: string;
+  globalAmount?: string;
+  dictatedHours?: string;
+}
+
+export enum DayName {
+  SUNDAY = 'SUNDAY',
+  MONDAY = 'MONDAY',
+  TUESDAY = 'TUESDAY',
+  WEDNESDAY = 'WEDNESDAY',
+  THURSDAY = 'THURSDAY',
+  FRIDAY = 'FRIDAY',
+  SATURDAY = 'SATURDAY'
+}
+
+export interface DayHours {
+  dayId: DayName;
+  hours: number;
 } 

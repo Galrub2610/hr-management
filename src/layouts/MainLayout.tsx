@@ -1,16 +1,16 @@
-import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
+import Navbar from '../components/Navbar/Navbar';
+import { Sidebar } from '../components/Sidebar/Sidebar';
+import styles from './MainLayout.module.css';
 
-export const MainLayout: React.FC = () => {
+export function MainLayout() {
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className={styles.layout}>
+      <Navbar />
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className={styles.main}>
         <Outlet />
       </main>
     </div>
   );
-};
-
-export default MainLayout; 
+} 

@@ -1,18 +1,17 @@
 // src/pages/CompanyPage.tsx
-import { useState, useEffect } from "react";
-import {
-  getAllCompanies,
-  createCompany,
-  updateCompany,
-  deleteCompany,
-} from "../services/CompanyService";
-import { toast } from "react-toastify";
+import React, { useState, useEffect } from 'react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../config/firebase';
+import { toast } from 'react-toastify';
 import styles from './CompanyPage.module.css';
 
 interface Company {
-  code: string;
+  id: string;
   name: string;
-  createdAt: Date;
+  address?: string;
+  phone?: string;
+  email?: string;
+  // הוסף שדות נוספים לפי הצורך
 }
 
 export default function CompanyPage() {
@@ -20,24 +19,39 @@ export default function CompanyPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formData, setFormData] = useState({ name: "" });
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshCompanies = async () => {
+    try {
+      const companiesRef = collection(db, 'companies');
+      const snapshot = await getDocs(companiesRef);
+      
+      if (snapshot.empty) {
+        setCompanies([]);
+        return;
+      }
+
+      const companiesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Company[];
+
+      setCompanies(companiesData);
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch companies:', error);
+      toast.error('שגיאה בטעינת החברות');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     refreshCompanies();
   }, []);
 
-  const refreshCompanies = () => {
-    try {
-      const data = getAllCompanies();
-      console.log("🔄 Refreshed companies:", data);
-      setCompanies([...data]);
-    } catch (error) {
-      console.error("❌ Failed to fetch companies:", error);
-      toast.error("שגיאה בטעינת החברות");
-    }
-  };
-
   const generateUniqueCompanyCode = (): string => {
-    const existingCodes = companies.map(c => parseInt(c.code));
+    const existingCodes = companies.map(c => parseInt(c.id));
     let newCode = 10; // Starting from 10 to ensure 2 digits
     
     while (existingCodes.includes(newCode) && newCode < 100) {
@@ -51,7 +65,7 @@ export default function CompanyPage() {
     return newCode.toString();
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.name.trim()) {
       toast.error("נא להזין שם חברה");
       return;
@@ -59,13 +73,22 @@ export default function CompanyPage() {
 
     try {
       const newCompanyCode = generateUniqueCompanyCode();
-      createCompany({
-        code: newCompanyCode,
+      const companiesRef = collection(db, 'companies');
+      
+      // שמירה ב-Firestore
+      const docRef = await addDoc(companiesRef, {
+        id: newCompanyCode,
         name: formData.name,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString()
       });
+
+      // עדכון ה-state המקומי
+      setCompanies(prevCompanies => [...prevCompanies, {
+        id: newCompanyCode,
+        name: formData.name
+      }]);
+
       toast.success("החברה נוספה בהצלחה!");
-      refreshCompanies();
       handleFormClose();
     } catch (error) {
       console.error("❌ Create company failed:", error);
@@ -73,14 +96,25 @@ export default function CompanyPage() {
     }
   };
 
-  const handleUpdate = (company: Company) => {
+  const handleUpdate = async (company: Company) => {
     const newName = prompt("הכנס שם חברה חדש:", company.name)?.trim();
 
     if (newName) {
       try {
-        updateCompany(company.code, { name: newName });
+        // עדכון ב-Firestore
+        const companyRef = doc(db, 'companies', company.id);
+        await updateDoc(companyRef, {
+          name: newName,
+          updatedAt: new Date().toISOString()
+        });
+
+        // עדכון ה-state המקומי
+        const updatedCompanies = companies.map(c =>
+          c.id === company.id ? { ...c, name: newName } : c
+        );
+        setCompanies(updatedCompanies);
+        
         toast.success("החברה עודכנה בהצלחה!");
-        refreshCompanies();
       } catch (error) {
         console.error("❌ Update company failed:", error);
         toast.error("שגיאה בעדכון החברה");
@@ -88,12 +122,18 @@ export default function CompanyPage() {
     }
   };
 
-  const handleDelete = (code: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("האם אתה בטוח שברצונך למחוק את החברה?")) {
       try {
-        deleteCompany(code);
+        // מחיקה מ-Firestore
+        const companyRef = doc(db, 'companies', id);
+        await deleteDoc(companyRef);
+
+        // עדכון ה-state המקומי
+        const updatedCompanies = companies.filter(c => c.id !== id);
+        setCompanies(updatedCompanies);
+        
         toast.success("החברה נמחקה בהצלחה");
-        refreshCompanies();
       } catch (error) {
         console.error("❌ Delete company failed:", error);
         toast.error("שגיאה במחיקת החברה");
@@ -106,6 +146,14 @@ export default function CompanyPage() {
     setFormData({ name: "" });
     setEditingCompany(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="loading-spinner">טוען חברות...</div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -166,7 +214,7 @@ export default function CompanyPage() {
 
       <div className={styles.tableContainer}>
         <div className={styles.tableHeader}>
-          <h2>טבלת ניהול חברות (companiesManagementTable)</h2>
+          <h2>טבלת ניהול חברות (companiesManagementTableTitle)</h2>
         </div>
         <div className={styles.tableWrapper}>
           <table className={styles.dataTable}>
@@ -174,16 +222,14 @@ export default function CompanyPage() {
               <tr>
                 <th>קוד חברה (companyCode)</th>
                 <th>שם החברה (companyName)</th>
-                <th>תאריך יצירה</th>
                 <th>פעולות</th>
               </tr>
             </thead>
             <tbody>
               {companies.map((company) => (
-                <tr key={company.code}>
-                  <td>{company.code}</td>
+                <tr key={company.id}>
+                  <td>{company.id}</td>
                   <td>{company.name}</td>
-                  <td>{new Date(company.createdAt).toLocaleDateString('he-IL')}</td>
                   <td>
                     <div className={styles.actionButtons}>
                       <button
@@ -194,7 +240,7 @@ export default function CompanyPage() {
                       </button>
                       <button
                         className={styles.deleteButton}
-                        onClick={() => handleDelete(company.code)}
+                        onClick={() => handleDelete(company.id)}
                       >
                         מחק
                       </button>
